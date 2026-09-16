@@ -1,0 +1,2318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tecnopuerto CRM</title>
+<!-- PWA "light": sin manifest.json ni service worker (Apps Script solo sirve un HTML).
+     Con esto, "Agregar a pantalla de inicio" abre sin barra del navegador, como una app. -->
+<meta name="theme-color" content="#0a0a0f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tecnopuerto">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Crect%20width%3D%22180%22%20height%3D%22180%22%20rx%3D%2236%22%20fill%3D%22%230a0a0f%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2263%25%22%20font-family%3D%22DM%20Sans%2C%20sans-serif%22%20font-size%3D%2278%22%20font-weight%3D%22700%22%20fill%3D%22%23818cf8%22%20text-anchor%3D%22middle%22%3ETP%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Crect%20width%3D%22180%22%20height%3D%22180%22%20rx%3D%2236%22%20fill%3D%22%230a0a0f%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2263%25%22%20font-family%3D%22DM%20Sans%2C%20sans-serif%22%20font-size%3D%2278%22%20font-weight%3D%22700%22%20fill%3D%22%23818cf8%22%20text-anchor%3D%22middle%22%3ETP%3C/text%3E%3C/svg%3E">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--border:#2a2a3d;--accent:#6366f1;--accent2:#818cf8;--text:#e8e8f0;--muted:#6b6b80;--success:#34d399;--warning:#fbbf24;--danger:#f87171;--font:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+.header{padding:14px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);position:sticky;top:0;z-index:10}
+.header h1{font-size:17px;font-weight:700;letter-spacing:-.5px}
+.header h1 span{color:var(--accent);font-weight:400}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px;transition:background .3s}
+.conn-dot.ok{background:var(--success)}.conn-dot.err{background:var(--danger)}
+.nav{display:flex;gap:4px;padding:10px 28px;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto}
+.nav button{padding:7px 16px;border-radius:6px;border:1px solid transparent;font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--muted);font-family:var(--font);transition:all .15s;white-space:nowrap}
+.nav button:hover{color:var(--text);background:var(--surface2)}
+.nav button.active{background:var(--accent);color:#fff}
+.content{padding:28px;max-width:1100px;margin:0 auto}
+.section{display:none}.section.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.card-sm{padding:14px}
+.card h3{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.big-num{font-family:var(--mono);font-size:26px;font-weight:500}
+.sub{font-size:12px;color:var(--muted);margin-top:4px}
+.kdelta{font-size:11px;font-weight:700;white-space:nowrap}
+.kdelta.up{color:var(--success)}.kdelta.down{color:var(--danger)}
+.kspark{display:block;width:100%;height:22px;margin-top:8px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.form-row{display:grid;gap:12px;margin-bottom:14px}
+.form-row.c2{grid-template-columns:1fr 1fr}
+.form-row.c3{grid-template-columns:1fr 1fr 1fr}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select{width:100%;padding:9px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:border .15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+select option{background:var(--surface2)}
+.btn{padding:9px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:var(--accent2)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-g:hover{color:var(--text);border-color:var(--muted)}
+.btn-ok{background:#065f46;color:var(--success)}
+.btn-sm{padding:6px 12px;font-size:12px}.btn-full{width:100%;justify-content:center}
+.flex{display:flex}.ac{align-items:center}.jb{justify-content:space-between}.g8{gap:8px}
+.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}.mt8{margin-top:8px}
+.stitle{font-size:16px;font-weight:700;margin-bottom:16px}
+.mono{font-family:var(--mono)}
+.ts{color:var(--success)}.tw{color:var(--warning)}.td{color:var(--danger)}.tm{color:var(--muted)}
+.tag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.tgs{background:#052e16;color:var(--success)}.tgw{background:#1c1500;color:var(--warning)}
+.tgd{background:#1f0000;color:var(--danger)}.tgm{background:var(--surface2);color:var(--muted)}.tga{background:#1e1b4b;color:var(--accent2)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:9px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+td{padding:11px 12px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.empty{text-align:center;padding:36px;color:var(--muted);font-size:13px}
+.hovercard{position:relative;cursor:default}
+.hovercard-pop{display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:20;min-width:220px;max-width:280px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.hovercard:hover .hovercard-pop{display:block}
+.hovercard-pop .hcrow{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--border)}
+.hovercard-pop .hcrow:last-child{border-bottom:none}
+.hovercard-pop .hctitle{font-weight:700;margin-bottom:6px;color:var(--text)}
+.alert{padding:10px 14px;border-radius:7px;font-size:13px;margin-bottom:14px}
+.as{background:#052e16;color:var(--success)}.ad{background:#1f0000;color:var(--danger)}.ai{background:#1e1b4b;color:var(--accent2)}
+.search{width:100%;padding:10px 14px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);font-size:14px;outline:none;margin-bottom:16px}
+.search:focus{border-color:var(--accent)}
+.ibox{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.irow{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:3px 0}
+.esel{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 8px;font-size:12px;cursor:pointer;font-family:var(--font)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:90%;max-width:480px}
+.modal h2{font-size:15px;font-weight:700;margin-bottom:16px}
+.pscroll{max-height:220px;overflow-y:auto}
+.bwrap{display:flex;align-items:flex-end;gap:6px;height:120px;margin-bottom:8px}
+.bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end}
+.blabel{font-size:10px;color:var(--muted)}.bval{font-size:9px;color:var(--muted);font-family:var(--mono)}
+.fbtn{cursor:pointer}.fbtn input[type=file]{display:none}
+.datein{padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;outline:none}
+@media(max-width:768px){.grid-4{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr}.form-row.c3{grid-template-columns:1fr 1fr}.content{padding:16px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>TECNOPUERTO <span>CRM</span></h1>
+  <div class="flex ac g8">
+    <span class="conn-dot" id="cDot"></span>
+    <span style="font-size:12px;color:var(--muted)" id="cTxt">Conectando...</span>
+    <span style="font-size:12px;color:var(--muted);margin-left:12px" id="fHoy"></span>
+    <button class="btn btn-g btn-sm" onclick="backupCompleto()" style="margin-left:12px" title="Exporta todo el sistema a Excel">↓ Backup</button>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="active" onclick="showTab('dashboard',this)">◈ Dashboard</button>
+  <button onclick="showTab('venta',this)">+ Nueva venta</button>
+  <button onclick="showTab('reparaciones',this)">⚙ Reparaciones</button>
+  <button onclick="showTab('gastos',this)">− Gastos</button>
+  <button onclick="showTab('stock',this)">▦ Stock</button>
+  <button onclick="showTab('stats',this)">↗ Estadísticas</button>
+  <button onclick="showTab('clientes',this)">☺ Clientes</button>
+</div>
+
+<div class="content">
+
+<!-- DASHBOARD -->
+<div class="section active" id="tab-dashboard">
+  <div class="flex ac jb mb20">
+    <div class="stitle">Dashboard</div>
+    <button class="btn btn-g btn-sm" onclick="cargarTodo()"><span class="spin" id="spin" style="display:none"></span> Actualizar</button>
+  </div>
+  <div class="grid-2 mb16">
+    <div class="card"><h3>Vendido hoy</h3><div class="big-num ts mono" id="kH" style="font-size:30px">—</div><div class="sub" id="kHs">—</div></div>
+    <div class="card"><h3>Ganancia hoy</h3><div class="big-num mono" id="kGv" style="font-size:30px">—</div><div class="sub" id="kG">—</div></div>
+  </div>
+  <div class="card mb20" id="metaCard">
+    <div class="flex ac jb" style="margin-bottom:10px">
+      <h3 style="margin-bottom:0">🎯 Meta del mes — Reparaciones</h3>
+      <span class="mono" id="metaTxt" style="font-size:13px">—</span>
+    </div>
+    <div style="background:var(--surface2);border-radius:6px;height:10px;overflow:hidden">
+      <div id="metaBar" style="height:100%;background:var(--accent);width:0%;transition:width .3s"></div>
+    </div>
+    <div class="sub" id="metaSub" style="margin-top:6px">—</div>
+  </div>
+  <div class="tm" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:0 0 10px">Necesita tu atención</div>
+  <div class="flex g8 mb20" style="flex-wrap:wrap">
+    <div class="card card-sm flex g8 ac hovercard" style="flex:1;min-width:150px"><span style="font-size:20px">⚙️</span><div><div class="big-num tw" id="kProc" style="font-size:22px">—</div><div class="sub">en proceso</div></div>
+      <div class="hovercard-pop" id="popProc"></div>
+    </div>
+    <div class="card card-sm flex g8 ac hovercard" style="flex:1;min-width:150px"><span style="font-size:20px">✅</span><div><div class="big-num ts" id="kListo" style="font-size:22px">—</div><div class="sub">listas para retirar</div></div>
+      <div class="hovercard-pop" id="popListo"></div>
+    </div>
+    <div class="card card-sm flex g8 ac hovercard" style="flex:1;min-width:150px"><span style="font-size:20px">📦</span><div><div class="big-num td" id="kStockBajo" style="font-size:22px">—</div><div class="sub">stock bajo</div></div>
+      <div class="hovercard-pop" id="popStockBajo"></div>
+    </div>
+    <div class="card card-sm flex g8 ac hovercard" style="flex:1;min-width:150px"><span style="font-size:20px">💰</span><div><div class="big-num" id="kCajaHoy" style="font-size:22px">—</div><div class="sub" id="kCajaHoySub">caja de hoy</div></div>
+      <div class="hovercard-pop" id="popCajaHoy"></div>
+    </div>
+  </div>
+  <div class="tm" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:0 0 10px">Esta semana</div>
+  <div class="grid-4">
+    <div class="card card-sm"><h3>Facturado</h3><div class="big-num mono" id="kS">—</div><div class="sub" id="kSs">—</div></div>
+    <div class="card card-sm"><h3>Margen</h3><div class="big-num" id="kM">—</div></div>
+    <div class="card card-sm"><h3>Top producto</h3><div class="big-num" id="kTopP" style="font-size:15px">—</div><div class="sub" id="kTopPs">—</div></div>
+    <div class="card card-sm"><h3>Ticket prom.</h3><div class="big-num mono" id="kTicket">—</div></div>
+  </div>
+  <div class="card mb20" id="cajaDia" style="display:none">
+    <div class="flex ac jb" style="margin-bottom:12px">
+      <h3 style="margin-bottom:0">Caja del día — por medio de pago</h3>
+      <button class="btn btn-p btn-sm" id="btnCerrarCaja" onclick="cerrarCaja()">🔒 Cerrar caja</button>
+    </div>
+    <div id="cajaDiaContent"></div>
+    <div id="cierresHist" style="margin-top:14px"></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><h3 style="margin-bottom:14px">Top productos — 7 días</h3><div id="topP"><div class="empty">Cargando...</div></div></div>
+    <div class="card"><h3 style="margin-bottom:14px">Reparaciones activas</h3><div id="repA"><div class="empty">Cargando...</div></div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3 style="margin-bottom:14px">Últimas ventas</h3><div id="ultV"><div class="empty">Cargando...</div></div></div>
+</div>
+
+<!-- VENTA -->
+<div class="section" id="tab-venta">
+  <div class="grid-2">
+    <div>
+      <div class="stitle mb16">Registrar venta</div>
+      <div class="card">
+        <div id="msgV"></div>
+          <div id="iProf" style="display:none" class="ibox mb16">
+          <div class="irow"><span class="tm">Costo unitario</span><span class="mono" id="iC">—</span></div>
+          <div class="irow"><span class="tm">Precio venta público</span><span class="mono" id="iPV">—</span></div>
+          <div class="irow"><span class="tm">Stock disponible</span><span class="mono" id="iS">—</span></div>
+        </div>
+        <div class="form-row c3">
+          <div class="form-group"><label>Cantidad</label><input type="number" id="vCant" value="1" min="1" oninput="calcV()"></div>
+          <div class="form-group"><label id="lblVPrice">Precio de venta</label><input type="number" id="vPrice" placeholder="0" oninput="calcV()"></div>
+          <div class="form-group"><label>Medio de pago</label><select id="vMedio"><option value="" selected disabled>— Elegí un medio —</option><option>Efectivo</option><option>Transferencia</option><option>Débito</option><option>Crédito</option><option>Pago QR</option></select></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-size:12px;color:var(--muted);font-weight:500">
+            <input type="checkbox" id="vCombinado" onchange="toggleCombinado()" style="width:auto"> Dividir el pago entre dos medios
+          </label>
+        </div>
+        <div id="vComboBox" style="display:none" class="form-row c2 mb16">
+          <div class="form-group"><label>Segundo medio</label><select id="vMedio2"><option value="" selected disabled>— Elegí —</option><option>Efectivo</option><option>Transferencia</option><option>Débito</option><option>Crédito</option><option>Pago QR</option></select></div>
+          <div class="form-group"><label>Monto del segundo medio</label><input type="number" id="vMonto2" placeholder="0" oninput="calcV()"></div>
+          <div class="tm" id="vComboTotal" style="font-size:12px;grid-column:1/-1">—</div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-size:12px;color:var(--muted);font-weight:500">
+            <input type="checkbox" id="vParcial" onchange="toggleParcial()" style="width:auto"> Cobro parcial (queda un saldo pendiente para más adelante)
+          </label>
+        </div>
+        <div id="vParcialBox" style="display:none">
+          <div class="form-row c3 mb16">
+            <div class="form-group"><label>Cliente</label><input type="text" id="vParcialCliente" placeholder="Nombre"></div>
+            <div class="form-group"><label>WhatsApp (opcional)</label><input type="text" id="vParcialWA" placeholder="Número"></div>
+            <div class="form-group"><label>Cobrás ahora</label><input type="number" id="vMontoAhora" placeholder="0" oninput="calcV()"></div>
+          </div>
+          <div class="form-row c2 mb16">
+            <div class="form-group"><label>Saldo pendiente</label><input type="text" id="vSaldoCalc" readonly style="opacity:.75" value="—"></div>
+            <div class="form-group"><label>Recordatorio para cobrar el resto</label><input type="date" id="vFechaRecordatorio"></div>
+          </div>
+        </div>
+        <div class="form-group mb16"><label>Producto</label>
+  <input type="text" id="vBusq" placeholder="Escribí para buscar..." oninput="filtrarProds()" autocomplete="off" style="margin-bottom:6px">
+  <div id="vDropdown" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:7px;max-height:180px;overflow-y:auto;"></div>
+  <input type="hidden" id="vProd">
+</div>
+        <div id="iCalc" style="display:none" class="ibox mb16">
+          <div class="irow"><span class="tm">Ganancia</span><span class="mono ts" id="cGan" style="font-size:16px;font-weight:600">—</span></div>
+          <div class="irow mt8"><span class="tm">Margen</span><span class="mono" id="cMar" style="font-size:16px;font-weight:600">—</span></div>
+          <div id="cWarn" style="display:none;margin-top:8px;font-size:12px;font-weight:600"></div>
+        </div>
+        <button class="btn btn-p btn-full" onclick="regVenta()">Registrar venta</button>
+      </div>
+    </div>
+    <div>
+      <div class="flex ac jb mb16">
+        <div class="stitle">Ventas</div>
+        <div class="flex g8 ac">
+          <input type="date" id="vDesde" class="datein">
+          <span class="tm" style="font-size:12px">→</span>
+          <input type="date" id="vHasta" class="datein">
+          <button class="btn btn-g btn-sm" onclick="renVentas(true)">Aplicar</button>
+          <button class="btn btn-g btn-sm" onclick="el('vDesde').value='';el('vHasta').value='';el('bVentas').value='';renVentas(true)">Limpiar</button>
+        </div>
+      </div>
+      <input class="search" placeholder="Buscar por producto..." id="bVentas" oninput="renVentas(true)">
+      <div class="tm" style="font-size:12px;margin:0 0 10px" id="ventasRes"></div>
+      <div class="card mb16" id="cobrosPendCard" style="display:none">
+        <h3 style="margin-bottom:14px">💳 Cobros pendientes</h3>
+        <div id="cobrosPend"></div>
+      </div>
+      <div class="card"><div id="tVentas"><div class="empty">Cargando...</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- GASTOS -->
+<div class="section" id="tab-gastos">
+  <div class="grid-2">
+    <div>
+      <div class="stitle mb16">Registrar gasto</div>
+      <div class="card">
+        <div id="msgG"></div>
+        <div class="form-row c2">
+          <div class="form-group"><label>Fecha</label><input type="date" id="gFecha"></div>
+          <div class="form-group"><label>Categoría</label><select id="gCat"><option value="" selected disabled>— Elegí —</option><option>Mercadería/Stock</option><option>Alquiler</option><option>Servicios</option><option>Sueldos</option><option>Impuestos</option><option>Otros</option></select></div>
+        </div>
+        <div class="form-group mb16"><label>Detalle</label><input type="text" id="gDet" placeholder="Ej: pago a laboratorio reparación de Karina"></div>
+        <div class="form-row c2">
+          <div class="form-group"><label>Monto</label><input type="number" id="gMonto" placeholder="0"></div>
+          <div class="form-group"><label>Medio de pago</label><select id="gMedio"><option value="" selected disabled>— Elegí un medio —</option><option>Efectivo</option><option>Transferencia</option><option>Débito</option><option>Crédito</option><option>Pago QR</option></select></div>
+        </div>
+        <button class="btn btn-p btn-full" onclick="regGasto()">Registrar gasto</button>
+      </div>
+    </div>
+    <div>
+      <div class="stitle mb16">Gastos</div>
+      <div id="gResumen" class="tm" style="font-size:12px;margin-bottom:10px">—</div>
+      <input class="search" placeholder="Buscar por detalle o categoría..." id="bGastos" oninput="renGastos()">
+      <div class="card"><div id="tGastos"><div class="empty">Cargando...</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- REPARACIONES -->
+<div class="section" id="tab-reparaciones">
+  <div class="flex ac jb mb20">
+    <div class="stitle">Reparaciones</div>
+    <button class="btn btn-p btn-sm" onclick="nuevoRepForm()">+ Nueva reparación</button>
+  </div>
+  <div id="fRep" style="display:none" class="card mb20">
+    <div class="form-row c3">
+      <div class="form-group"><label>Cliente</label><input id="rCli" placeholder="Nombre" list="clienteList" oninput="autocompletarCliente()"><datalist id="clienteList"></datalist></div>
+      <div class="form-group"><label>WhatsApp</label><input id="rWA" placeholder="Número"></div>
+      <div class="form-group"><label>Equipo</label><input id="rEq" placeholder="Samsung A55, iPhone 14..."></div>
+    </div>
+    <div class="form-group mb16"><label>Problema declarado</label><input id="rProb" placeholder="No carga, pantalla rota..."></div>
+    <div class="form-row c3">
+      <div class="form-group"><label>Precio reparación</label><input type="number" id="rPrc" placeholder="Opcional si todavía no se sabe" title="Si lo dejás vacío, la reparación entra en Esperando presupuesto"></div>
+      <div class="form-group"><label>Costo técnico</label><input type="number" id="rCos" value="0" title="Lo que nos cobra el técnico: mano de obra + insumos"></div>
+      <div class="form-group"><label>Recibió</label><input type="text" id="rTec" placeholder="Opcional — quién lo recibió" list="recibioList"><datalist id="recibioList"></datalist></div>
+    </div>
+    <div class="form-group mb16"><label>Notas</label><input id="rNot" placeholder="Opcional"></div>
+    <!-- Sin medio de pago acá a propósito: se elige recién al marcar la reparación como Entregado,
+         porque hasta entonces no se sabe cómo va a pagar el cliente — ver [[crm-repuesta-medio-entrega]] -->
+    <span class="tm" style="font-size:11px;display:block;margin-bottom:14px">El medio de pago se pide al marcar la reparación como Entregado</span>
+    <button class="btn btn-p" id="btnGuardarRep" onclick="guardarRep()">Guardar reparación</button>
+  </div>
+  <div class="flex g8 mb16" id="fReps">
+    <button class="btn btn-p btn-sm" onclick="setFR('activas',this)">Activas</button>
+    <button class="btn btn-g btn-sm" onclick="setFR('Entregado',this)">Entregado</button>
+    <button class="btn btn-g btn-sm" onclick="setFR('Abandonado',this)">Abandonado</button>
+    <button class="btn btn-g btn-sm" onclick="setFR('todos',this)">Todos</button>
+  </div>
+  <input class="search" placeholder="Buscar por cliente, equipo, quién recibió, precio o costo..." id="bRep" oninput="renRep()">
+  <div class="flex g8 ac mb16">
+    <input type="date" id="rDesde" class="datein">
+    <span class="tm" style="font-size:12px">→</span>
+    <input type="date" id="rHasta" class="datein">
+    <button class="btn btn-g btn-sm" onclick="renRep()">Aplicar</button>
+    <button class="btn btn-g btn-sm" onclick="el('rDesde').value='';el('rHasta').value='';renRep()">Limpiar</button>
+    <button class="btn btn-ok btn-sm" onclick="exportRepXL()">↓ Excel</button>
+    <span class="tm" style="font-size:12px" id="repRes"></span>
+  </div>
+  <!-- Vista "Activas": Esperando presupuesto / En proceso / Listo lado a lado, para no tener que
+       scrollear una lista mezclada — ver [[crm-reparaciones-activas]] y [[crm-reparaciones-ia-agentica]].
+       "Esperando presupuesto" agrupa los casos sin precio confirmado (no se sabe modelo/costo al
+       recibir el equipo); solo muestra cliente/equipo/problema/antigüedad, sin PVP ni costo técnico
+       porque todavía no se conocen. "Listo" suma el tilde de Avisado. -->
+  <div id="repActivasWrap" class="grid-3">
+    <div class="card" style="overflow-x:auto">
+      <div class="flex ac jb mb16"><div style="font-size:13px;font-weight:700">💬 Esperando presupuesto</div><span class="tm" style="font-size:12px" id="repEsperaRes"></span></div>
+      <div id="tRepEspera"><div class="empty">Cargando...</div></div>
+    </div>
+    <div class="card" style="overflow-x:auto">
+      <div class="flex ac jb mb16"><div style="font-size:13px;font-weight:700">⚙ En proceso</div><span class="tm" style="font-size:12px" id="repProcRes"></span></div>
+      <div id="tRepProc"><div class="empty">Cargando...</div></div>
+    </div>
+    <div class="card" style="overflow-x:auto">
+      <div class="flex ac jb mb16"><div style="font-size:13px;font-weight:700">✅ Listo (para retirar)</div><span class="tm" style="font-size:12px" id="repListoRes"></span></div>
+      <div id="tRepListo"><div class="empty">Cargando...</div></div>
+    </div>
+  </div>
+  <div id="repTablaWrap" class="card" style="overflow-x:auto;display:none"><div id="tRep"><div class="empty">Cargando...</div></div></div>
+</div>
+
+<!-- CLIENTES: se arma solo, a partir de Reparaciones (no es un campo obligatorio en ningún lado) -->
+<div class="section" id="tab-clientes">
+  <div class="flex ac jb mb20">
+    <div class="stitle">Clientes</div>
+    <span class="tm" style="font-size:12px" id="clientesRes"></span>
+  </div>
+  <div class="tm mb16" style="font-size:12px">Se arma solo con quienes dejaron una reparación. No hace falta cargar nada acá.</div>
+  <input class="search" placeholder="Buscar por nombre o WhatsApp..." id="bClientes" oninput="renClientes()">
+  <div class="card" style="overflow-x:auto"><div id="tClientes"><div class="empty">Cargando...</div></div></div>
+</div>
+
+<!-- STOCK -->
+<div class="section" id="tab-stock">
+  <div class="flex ac jb mb20">
+    <div><div class="stitle">Stock</div><div class="tm" style="font-size:12px" id="sRes">—</div></div>
+    <div class="flex g8">
+      <label class="btn btn-g btn-sm fbtn">↑ Importar Excel<input type="file" accept=".xlsx,.xls" onchange="impExcel(event)"></label>
+      <label class="btn btn-g btn-sm fbtn">↑ Importar precios venta<input type="file" accept=".xlsx,.xls" onchange="impPrecios(event)"></label>
+      <button class="btn btn-g btn-sm" id="btnRepo" style="display:none" onclick="tog('reposicion')">🛒 Reposición</button>
+      <button class="btn btn-p btn-sm" onclick="tog('fStock')">+ Agregar producto</button>
+    </div>
+  </div>
+  <div id="msgS"></div>
+  <div id="fStock" style="display:none" class="card mb16">
+    <div class="form-row c3">
+      <div class="form-group"><label>Nombre</label><input id="sN" placeholder="CABLE TIPO C 1M..."></div>
+      <div class="form-group"><label>Cantidad</label><input type="number" id="sC"></div>
+      <div class="form-group"><label>Costo unitario</label><input type="number" id="sCo"></div>
+    </div>
+    <div class="form-row c3">
+      <div class="form-group"><label>Precio venta público</label><input type="number" id="sPV"></div>
+      <div class="form-group"><label>Stock mínimo alerta</label><input type="number" id="sSm" value="3" min="0" placeholder="3"></div>
+    </div>
+    <button class="btn btn-p" onclick="addStock()">Agregar al stock</button>
+  </div>
+  <div class="flex g8 ac mb16">
+    <input class="search" placeholder="Buscar producto..." id="bStock" oninput="renStock()" style="margin-bottom:0;flex:1">
+    <button class="btn btn-g btn-sm" id="btnSortStock" onclick="toggleSortStock()" style="white-space:nowrap">↕ Cantidad</button>
+  </div>
+  <div class="card"><div id="tStock"><div class="empty">Cargando...</div></div></div>
+  <div id="reposicion" style="display:none" class="card mb16"></div>
+</div>
+
+<!-- ESTADÍSTICAS -->
+<div class="section" id="tab-stats">
+  <div class="flex ac jb mb20">
+    <div class="stitle">Estadísticas</div>
+    <div class="flex g8 ac">
+      <input type="date" id="dDesde" class="datein">
+      <span class="tm" style="font-size:12px">→</span>
+      <input type="date" id="dHasta" class="datein">
+      <button class="btn btn-g btn-sm" onclick="renStats()">Aplicar</button>
+      <button class="btn btn-ok btn-sm" onclick="exportXL()">↓ Excel</button>
+    </div>
+  </div>
+  <div class="grid-4 mb20">
+    <div class="card card-sm"><h3>Total facturado</h3><div class="big-num ts" id="stT">—</div><div class="sub">Accesorios + reparaciones</div></div>
+    <div class="card card-sm"><h3>Ganancia bruta (total)</h3><div class="big-num mono" id="stG">—</div><div class="sub" id="stMs">—</div></div>
+    <div class="card card-sm"><div class="flex ac jb"><h3>Reparaciones</h3><span class="kdelta" id="stRDelta"></span></div><div class="big-num mono" id="stR">—</div><div class="sub" id="stRs">—</div><svg class="kspark" id="sparkR" viewBox="0 0 100 24" preserveAspectRatio="none"></svg></div>
+    <div class="card card-sm"><h3>Ganancia rep.</h3><div class="big-num ts" id="stGR">—</div><div class="sub" id="stCR">—</div></div>
+  </div>
+  <div class="grid-4 mb20">
+    <div class="card card-sm"><h3>Gastos operativos</h3><div class="big-num tw" id="stGastos">—</div><div class="sub" id="stGastosSub">—</div></div>
+    <div class="card card-sm"><div class="flex ac jb"><h3>Ganancia neta</h3><span class="kdelta" id="stNetaDelta"></span></div><div class="big-num ts" id="stNeta">—</div><div class="sub">Ventas + reparaciones − gastos (sin mercadería)</div><svg class="kspark" id="sparkNeta" viewBox="0 0 100 24" preserveAspectRatio="none"></svg></div>
+    <div class="card card-sm"><div class="flex ac jb"><h3>Ticket promedio</h3><span class="kdelta" id="stTicketDelta"></span></div><div class="big-num mono" id="stTicket">—</div><div class="sub" id="stTicketSub">—</div><svg class="kspark" id="sparkTicket" viewBox="0 0 100 24" preserveAspectRatio="none"></svg></div>
+    <div class="card card-sm"><h3>Operaciones</h3><div class="big-num mono" id="stOps">—</div><div class="sub">ventas + reparaciones entregadas</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="flex ac jb" style="margin-bottom:6px"><h3 style="margin-bottom:0">Facturación diaria — últimos 14 días</h3></div>
+      <div class="tm" id="mejorDiaBadge" style="font-size:12px;margin-bottom:12px;min-height:16px"></div>
+      <div class="bwrap" id="barC"></div>
+      <div class="flex g8" style="margin-top:4px">
+        <div class="flex ac g8"><div style="width:10px;height:10px;border-radius:2px;background:var(--accent)"></div><span style="font-size:11px;color:var(--muted)">Accesorios</span></div>
+        <div class="flex ac g8"><div style="width:10px;height:10px;border-radius:2px;background:var(--success)"></div><span style="font-size:11px;color:var(--muted)">Reparaciones</span></div>
+      </div>
+      <div class="tm" style="font-size:11px;margin-top:8px">Tocá una columna para ver el movimiento de ese día</div>
+      <div id="movDiaDetalle"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:14px">Por medio de pago</h3>
+      <div id="tMedios"><div class="empty">Sin datos</div></div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+        <div class="irow"><span class="tm">Accesorios</span><span class="mono" id="stV">—</span></div>
+        <div class="irow mt8"><span class="tm">Reparaciones</span><span class="mono" id="stRv">—</span></div>
+        <div class="irow mt8" style="font-weight:700"><span>Total</span><span class="mono ts" id="stTot">—</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3 style="margin-bottom:18px">Evolución mensual — últimos 12 meses</h3>
+    <div class="bwrap" id="barM"></div>
+    <div class="flex g8" style="margin-top:4px">
+      <div class="flex ac g8"><div style="width:10px;height:10px;border-radius:2px;background:var(--accent)"></div><span style="font-size:11px;color:var(--muted)">Facturación</span></div>
+      <div class="flex ac g8"><div style="width:10px;height:10px;border-radius:2px;background:var(--success)"></div><span style="font-size:11px;color:var(--muted)">Ganancia neta</span></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="flex ac jb mb16">
+      <div style="font-size:13px;font-weight:700">Stock actual</div>
+      <span class="tm" style="font-size:12px" id="statsStockRes"></span>
+    </div>
+    <div class="flex g8 ac mb16">
+      <input class="search" placeholder="Buscar producto..." id="bStatsStock" oninput="renStatsStock()" style="margin-bottom:0;flex:1">
+      <select class="esel" id="statsStockOrden" onchange="renStatsStock()">
+        <option value="cantidad">Ordenar: Cantidad</option>
+        <option value="nombre">Ordenar: Nombre</option>
+        <option value="costo">Ordenar: Costo unit.</option>
+        <option value="precioVenta">Ordenar: Precio venta</option>
+        <option value="margen">Ordenar: % Ganancia</option>
+        <option value="valor">Ordenar: Valor total</option>
+      </select>
+      <button class="btn btn-g btn-sm" id="btnStatsStockDir" onclick="toggleStatsStockDir()" title="Cambiar dirección">↑ Asc.</button>
+    </div>
+    <div id="tStatsStock"><div class="empty">Cargando...</div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="flex ac jb mb16">
+      <div style="font-size:13px;font-weight:700">Stock sin rotación</div>
+      <span class="tm" style="font-size:12px">Con stock y sin ventas en los últimos <span id="rotDias">60</span> días</span>
+    </div>
+    <div id="tDeadStock"><div class="empty">Cargando...</div></div>
+  </div>
+</div>
+
+
+
+</div><!-- /content -->
+
+<!-- Modal -->
+<div class="overlay" id="modImp" style="display:none">
+  <div class="modal">
+    <h2>Vista previa — Importación de stock</h2>
+    <div id="impInfo" class="alert ai mb16"></div>
+    <div class="pscroll mb16">
+      <table><thead><tr><th>Producto</th><th>Cant.</th><th>Costo</th></tr></thead><tbody id="impBody"></tbody></table>
+    </div>
+    <div class="flex g8">
+      <button class="btn btn-g btn-sm" onclick="cerrarMod()">Cancelar</button>
+            <button class="btn btn-p btn-sm" onclick="confImp()">Confirmar importación</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: medio de pago al marcar una reparación como Entregado (el medio no se pide al cargarla,
+     recién acá — ver [[crm-reparaciones-ia-agentica]] y guardarRep) -->
+<div class="overlay" id="modalEntrega" style="display:none">
+  <div class="modal">
+    <h2>¿Cómo pagó — <span id="emCliente">—</span>?</h2>
+    <div class="form-group mb16"><label>Medio de pago</label>
+      <select id="emMedio1"><option value="" selected disabled>— Elegí un medio —</option><option>Efectivo</option><option>Transferencia</option><option>Débito</option><option>Crédito</option><option>Pago QR</option></select>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-size:12px;color:var(--muted);font-weight:500">
+        <input type="checkbox" id="emCombinado" onchange="toggleEmCombinado()" style="width:auto"> Dividir el pago entre dos medios
+      </label>
+    </div>
+    <div id="emComboBox" style="display:none" class="form-row c2 mb16">
+      <div class="form-group"><label>Segundo medio</label><select id="emMedio2"><option value="" selected disabled>— Elegí —</option><option>Efectivo</option><option>Transferencia</option><option>Débito</option><option>Crédito</option><option>Pago QR</option></select></div>
+      <div class="form-group"><label>Monto del segundo medio</label><input type="number" id="emMonto2" placeholder="0" oninput="calcEmTotal()"></div>
+    </div>
+    <div class="tm mb16" style="font-size:12px">Total de la reparación: <span class="mono ts" id="emTotal">—</span></div>
+    <div class="tm mb16" id="emResumen" style="font-size:12px"></div>
+    <div class="flex g8">
+      <button class="btn btn-g btn-sm" onclick="cancelarEntrega()">Cancelar</button>
+      <button class="btn btn-p btn-sm" onclick="confirmarEntrega()">Confirmar entrega</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+var WURL = '<?= ScriptApp.getService().getUrl() ?>';
+var state = { stock: [], ventas: [], reparaciones: [], gastos: [], cierres: [] };
+var filtroRep = 'activas';
+var editandoRepId = null;
+var impPrev = [];
+ function confImp() {
+  apiPost({ accion: 'importarStock', items: impPrev, reemplazar: false }, function(err, d) {
+    if (err) return showMsg('msgS', 'd', 'Error al importar.');
+    impPrev.forEach(function(item) {
+      var ex = state.stock.filter(function(s) { return s.nombre === item.nombre; })[0];
+      if (ex) { ex.cantidad = (parseInt(ex.cantidad) || 0) + item.cantidad; ex.costo = item.costo; }
+      else state.stock.push(item);
+    });
+    cerrarMod(); renStock(); renSelProd();
+    showMsg('msgS', 's', '✓ ' + (d && d.importados ? d.importados : impPrev.length) + ' productos importados.');
+  });
+}
+function el(id) { return document.getElementById(id); }
+function fm(n) { return '$' + Math.round(n || 0).toLocaleString('es-AR'); }
+function fd(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+function waLink(wa, nombre, equipo) {
+  if (!wa) return null;
+  var digits = String(wa).replace(/\D/g, '');
+  if (digits.charAt(0) === '0') digits = digits.slice(1);
+  if (digits.slice(0, 2) !== '54') digits = '54' + digits;
+  var msg = encodeURIComponent('Hola ' + nombre + ', tu equipo ' + equipo + ' está listo para retirar en Tecnopuerto. 📱');
+  return 'https://wa.me/' + digits + '?text=' + msg;
+}
+// Mensaje de WhatsApp pidiendo reseña en Google — se usa al marcar una reparación como Entregado
+function waLinkResena(wa, nombre) {
+  if (!wa) return null;
+  var digits = String(wa).replace(/\D/g, '');
+  if (digits.charAt(0) === '0') digits = digits.slice(1);
+  if (digits.slice(0, 2) !== '54') digits = '54' + digits;
+  var msg = encodeURIComponent('¡Gracias ' + nombre + ' por confiar en Tecnopuerto! Si tenés un minuto, nos ayudaría muchísimo que nos dejes una reseña acá: https://g.page/r/CSESq3H_M9OcEBM/review 🙏');
+  return 'https://wa.me/' + digits + '?text=' + msg;
+}
+function _waDigits(wa) {
+  var digits = String(wa || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.charAt(0) === '0') digits = digits.slice(1);
+  if (digits.slice(0, 2) !== '54') digits = '54' + digits;
+  return digits;
+}
+// Link de WhatsApp simple (sin mensaje precargado) — se usa en la pestaña Clientes
+function waLinkPlano(wa) {
+  var digits = _waDigits(wa);
+  return digits ? 'https://wa.me/' + digits : null;
+}
+
+// CLIENTES: se arma solo a partir de Reparaciones (sin hoja propia, sin campo obligatorio).
+// Agrupa por WhatsApp si está cargado; si no, por nombre (mayúsculas, sin espacios extra).
+function _clientesAgregados() {
+  var map = {};
+  state.reparaciones.forEach(function(r) {
+    var wa = _waDigits(r.whatsapp);
+    var nombre = String(r.cliente || '').trim();
+    if (!wa && !nombre) return; // sin nombre ni whatsapp, no hay con qué agrupar
+    var key = wa || ('n:' + nombre.toUpperCase());
+    if (!map[key]) map[key] = { nombre: nombre || '(sin nombre)', whatsapp: r.whatsapp || '', cantidad: 0, total: 0, ultima: '' };
+    map[key].cantidad++;
+    map[key].total += parseFloat(r.precioReparacion) || 0;
+    if (nombre) map[key].nombre = nombre;
+    if (!map[key].whatsapp && r.whatsapp) map[key].whatsapp = r.whatsapp;
+    var f = r.fechaEntrega || r.fecha || '';
+    if (f && f > map[key].ultima) map[key].ultima = f;
+  });
+  return Object.keys(map).map(function(k) { return map[k]; });
+}
+function renClientes() {
+  if (!el('tClientes')) return;
+  var buscar = (el('bClientes') ? (el('bClientes').value || '') : '').toLowerCase();
+  var arr = _clientesAgregados().filter(function(c) {
+    return !buscar || c.nombre.toLowerCase().indexOf(buscar) >= 0 || String(c.whatsapp).indexOf(buscar) >= 0;
+  }).sort(function(a, b) { return b.cantidad - a.cantidad || String(b.ultima).localeCompare(String(a.ultima)); });
+  if (el('clientesRes')) el('clientesRes').textContent = arr.length + (arr.length === 1 ? ' cliente' : ' clientes');
+  if (!arr.length) { el('tClientes').innerHTML = '<div class="empty">Todavía no hay clientes cargados (se arman solos desde Reparaciones)</div>'; return; }
+  el('tClientes').innerHTML = '<table><thead><tr><th>Cliente</th><th>WhatsApp</th><th>Reparaciones</th><th>Total facturado</th><th>Última visita</th></tr></thead><tbody>' +
+    arr.map(function(c) {
+      var wl = waLinkPlano(c.whatsapp);
+      return '<tr><td>' + c.nombre + '</td>' +
+        '<td>' + (wl ? '<a href="' + wl + '" target="_blank" style="color:#25D366;text-decoration:none">💬 ' + c.whatsapp + '</a>' : (c.whatsapp || '—')) + '</td>' +
+        '<td class="mono">' + c.cantidad + '</td>' +
+        '<td class="mono ts">' + fm(c.total) + '</td>' +
+        '<td class="mono tm">' + fd(c.ultima) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  // Datalist para autocompletar el campo Cliente en "Nueva reparación"
+  if (el('clienteList')) {
+    el('clienteList').innerHTML = arr.map(function(c) { return '<option value="' + c.nombre.replace(/"/g, '&quot;') + '">'; }).join('');
+  }
+}
+// Si el nombre tipeado coincide con un cliente ya existente y el WhatsApp está vacío, lo autocompleta.
+// El campo sigue siendo libre: si no matchea nada, no pasa nada (no es obligatorio).
+function autocompletarCliente() {
+  var nombre = (el('rCli').value || '').trim().toUpperCase();
+  if (!nombre || el('rWA').value) return;
+  var match = _clientesAgregados().find(function(c) { return c.nombre.toUpperCase() === nombre; });
+  if (match && match.whatsapp) el('rWA').value = match.whatsapp;
+}
+// Fecha LOCAL en formato YYYY-MM-DD — toISOString() usa UTC y desfasaba el día
+// (ej: una venta a las 21:30 en Argentina -UTC-3- ya caía en el día siguiente en UTC).
+function localDateStr(d) {
+  d = d || new Date();
+  var tzMs = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - tzMs).toISOString().split('T')[0];
+}
+function today() { return localDateStr(); }
+function nowTime() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+// Clave de orden: fecha + hora (si no hay hora, usa el id que es cronologico)
+function ventaKey(v) { return (v.fecha || '') + 'T' + (v.hora || '') + '#' + (v.id || ''); }
+// Partes del pago de una venta: [{medio, monto}] — soporta pago combinado (medio1+medio2)
+function medioPartes(v) {
+  var total = (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0);
+  if (v.medio2) {
+    var m2 = parseFloat(v.montoMedio2) || 0;
+    var m1 = v.montoMedio1 !== undefined && v.montoMedio1 !== '' ? (parseFloat(v.montoMedio1) || 0) : (total - m2);
+    return [{ medio: v.medio1 || v.medio, monto: m1 }, { medio: v.medio2, monto: m2 }];
+  }
+  // Venta con cobro parcial: a la caja del día DE LA VENTA solo entra lo efectivamente cobrado ese
+  // día (montoMedio1 guarda "lo cobrado ahora", no el total). El saldo entra a la caja del día en
+  // que se cobra — ver calcCajaDia().
+  if ((parseFloat(v.saldoPendiente) || 0) > 0) {
+    return [{ medio: v.medio, monto: parseFloat(v.montoMedio1) || 0 }];
+  }
+  return [{ medio: v.medio, monto: total }];
+}
+// Partes del pago de una reparación entregada: [{medio, monto}] — mismo patrón que medioPartes(v),
+// el medio recién se define al marcar Entregado (ver confirmarEntrega/abrirModalEntrega).
+function repMedioPartes(r) {
+  var total = parseFloat(r.precioReparacion) || 0;
+  if (r.medio2) {
+    var m2 = parseFloat(r.montoMedio2) || 0;
+    var m1 = r.montoMedio1 !== undefined && r.montoMedio1 !== '' ? (parseFloat(r.montoMedio1) || 0) : (total - m2);
+    return [{ medio: r.medio1 || r.medio, monto: m1 }, { medio: r.medio2, monto: m2 }];
+  }
+  return [{ medio: r.medio || 'Otro', monto: total }];
+}
+// Etiqueta corta para mostrar el medio de una reparación en tablas ("Efectivo" o "Efectivo + Transferencia")
+function _medioLabelRep(r) {
+  if (!r.medio && !r.medio2) return '—';
+  return r.medio2 ? (r.medio1 || r.medio) + ' + ' + r.medio2 : r.medio;
+}
+function gid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+function tog(id) { var e = el(id); e.style.display = e.style.display === 'none' ? 'block' : 'none'; }
+function showMsg(id, tipo, txt, ms) {
+  var e = el(id); if (!e) return;
+  e.innerHTML = '<div class="alert a' + tipo + '">' + txt + '</div>';
+  if (ms !== 0) setTimeout(function() { e.innerHTML = ''; }, ms || 4000);
+}
+function setConn(ok) {
+  el('cDot').className = 'conn-dot ' + (ok ? 'ok' : 'err');
+  el('cTxt').textContent = ok ? 'Conectado a Sheets' : 'Sin conexión';
+}
+
+function apiGet(hoja, cb) {
+  var url = WURL + '?accion=leer&hoja=' + hoja;
+  fetch(url).then(function(r) { return r.json(); }).then(function(d) { cb(null, d.data); }).catch(function(e) { cb(e); });
+}
+function apiPost(body, cb) {
+  fetch(WURL, { method: 'POST', body: JSON.stringify(body) })
+    .then(function(r) { return r.json(); })
+    .then(function(d) { cb(null, d); })
+    .catch(function(e) { cb(e); });
+}
+
+function cargarTodo() {
+  el('spin').style.display = 'inline-block';
+  var loaded = 0;
+  var errs = 0;
+  function done(err, hoja, data) {
+    if (err) { errs++; } else { state[hoja] = data; }
+    loaded++;
+    if (loaded === 5) {
+      el('spin').style.display = 'none';
+      if (errs === 0) { setConn(true); renAll(); } else { setConn(false); }
+    }
+  }
+  apiGet('stock', function(e, d) { done(e, 'stock', d); });
+  apiGet('ventas', function(e, d) { done(e, 'ventas', d); });
+  apiGet('reparaciones', function(e, d) { done(e, 'reparaciones', d); });
+  apiGet('gastos', function(e, d) { done(e, 'gastos', d); });
+  apiGet('cierres', function(e, d) { done(e, 'cierres', d); });
+}
+
+function renAll() { renDash(); renSelProd(); renVentas(); renRep(); renClientes(); renStock(); renStats(); renStatsStock(); renGastos(); renMeta(); }
+// Meta mensual del Dashboard — desde el 1/9/2026 es por PLATA, no por cantidad: $800.000 de
+// ganancia neta en Reparaciones por mes. Cuenta reparaciones ENTREGADAS este mes (mismo criterio
+// que "Ganancia hoy" y Estadísticas: fechaEntrega, con fallback a fecha) — ganancia = precio - costo técnico.
+var META_REP_GANANCIA = 800000;
+function renMeta() {
+  if (!el('metaCard')) return;
+  var mesActual = localDateStr(new Date()).slice(0, 7); // 'YYYY-MM'
+  var ent = state.reparaciones.filter(function(r) { return r.estado === 'Entregado' && String(r.fechaEntrega || r.fecha || '').slice(0, 7) === mesActual; });
+  var gan = ent.reduce(function(s, r) { return s + (parseFloat(r.precioReparacion) || 0) - (parseFloat(r.costoRepuesto) || 0); }, 0);
+  var pct = Math.min(100, Math.round(gan / META_REP_GANANCIA * 100));
+  if (el('metaTxt')) el('metaTxt').textContent = fm(gan) + ' / ' + fm(META_REP_GANANCIA);
+  if (el('metaBar')) {
+    el('metaBar').style.width = pct + '%';
+    el('metaBar').style.background = gan >= META_REP_GANANCIA ? 'var(--success)' : 'var(--accent)';
+  }
+  if (el('metaSub')) {
+    el('metaSub').textContent = gan >= META_REP_GANANCIA
+      ? '🎉 Meta cumplida este mes'
+      : fm(META_REP_GANANCIA - gan) + ' más para llegar a la meta';
+  }
+}
+var statsStockDir = 1; // 1 = ascendente, -1 = descendente
+function toggleStatsStockDir() {
+  statsStockDir = statsStockDir === 1 ? -1 : 1;
+  if (el('btnStatsStockDir')) el('btnStatsStockDir').textContent = statsStockDir === 1 ? '↑ Asc.' : '↓ Desc.';
+  renStatsStock();
+}
+function _statsStockValor(s, campo) {
+  var c = parseInt(s.cantidad) || 0;
+  var costo = parseFloat(s.costo) || 0;
+  var pv = parseFloat(s.precioVenta) || 0;
+  switch (campo) {
+    case 'nombre': return String(s.nombre || '').toLowerCase();
+    case 'costo': return costo;
+    case 'precioVenta': return pv;
+    case 'margen': return costo > 0 ? (pv - costo) / costo * 100 : -Infinity;
+    case 'valor': return costo * c;
+    default: return c; // cantidad
+  }
+}
+function renStatsStock() {
+  var buscar = (el('bStatsStock') ? (el('bStatsStock').value || '') : '').toLowerCase();
+  var campo = el('statsStockOrden') ? el('statsStockOrden').value : 'cantidad';
+  var fil = state.stock.filter(function(s) { return !buscar || s.nombre.toLowerCase().indexOf(buscar) >= 0; });
+  var totC = state.stock.reduce(function(s, i) { return s + (parseFloat(i.costo) || 0) * (parseInt(i.cantidad) || 0); }, 0);
+  var sin = state.stock.filter(function(s) { return (parseInt(s.cantidad) || 0) === 0; }).length;
+  var bajo = state.stock.filter(function(s) { var c = parseInt(s.cantidad) || 0; var m = parseInt(s.stockMinimo) || 3; return c > 0 && c <= m; }).length;
+  if (el('statsStockRes')) el('statsStockRes').innerHTML = state.stock.length + ' productos · <span class="mono tw">' + fm(totC) + '</span>' + (sin ? ' · <span class="td">' + sin + ' sin stock</span>' : '') + (bajo ? ' · <span class="tw">' + bajo + ' bajo mínimo</span>' : '');
+  if (!el('tStatsStock')) return;
+  if (!fil.length) { el('tStatsStock').innerHTML = '<div class="empty">Sin resultados</div>'; return; }
+  var sorted = fil.slice().sort(function(a, b) {
+    var va = _statsStockValor(a, campo), vb = _statsStockValor(b, campo);
+    if (va < vb) return -1 * statsStockDir;
+    if (va > vb) return 1 * statsStockDir;
+    return 0;
+  });
+  el('tStatsStock').innerHTML = '<table><thead><tr><th>Producto</th><th>Stock</th><th>Mín.</th><th>Costo unit.</th><th>Precio venta</th><th>% Ganancia</th><th>Valor total</th><th>Estado</th></tr></thead><tbody>' +
+    sorted.map(function(s) {
+      var c = parseInt(s.cantidad) || 0;
+      var mn = parseInt(s.stockMinimo) || 3;
+      var costo = parseFloat(s.costo) || 0;
+      var pv = parseFloat(s.precioVenta) || 0;
+      var marg = costo > 0 && pv > 0 ? (pv - costo) / costo * 100 : null;
+      var cls = c === 0 ? 'tgd' : c <= mn ? 'tgw' : 'tgs';
+      var lbl = c === 0 ? 'Sin stock' : c <= mn ? 'Bajo' : 'OK';
+      return '<tr><td>' + s.nombre + '</td><td class="mono">' + c + '</td><td class="mono tm">' + mn + '</td><td class="mono">' + fm(costo) + '</td><td class="mono">' + (pv > 0 ? fm(pv) : '—') + '</td><td class="mono ' + (marg === null ? 'tm' : marg >= 80 ? 'ts' : 'tw') + '">' + (marg === null ? '—' : marg.toFixed(0) + '%') + '</td><td class="mono">' + fm(costo * c) + '</td><td><span class="tag ' + cls + '">' + lbl + '</span></td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('.nav button').forEach(function(b) { b.classList.remove('active'); });
+  el('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// DASHBOARD
+function renDash() {
+  var hoy = today();
+  var vH = state.ventas.filter(function(v) { return v.fecha === hoy; });
+  var hace7 = new Date(); hace7.setDate(hace7.getDate() - 7);
+  var vS = state.ventas.filter(function(v) { return new Date(v.fecha + 'T12:00:00') >= hace7; });
+  function sv(arr) { return arr.reduce(function(s, v) { return s + (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0); }, 0); }
+  function sc(arr) { return arr.reduce(function(s, v) { return s + (parseFloat(v.costoUnit) || 0) * (parseInt(v.cantidad) || 0); }, 0); }
+  var tH = sv(vH), cH = sc(vH), mH = cH > 0 ? ((tH - cH) / cH * 100) : 0;
+  var tS = sv(vS), cS = sc(vS), mS = cS > 0 ? ((tS - cS) / cS * 100) : 0;
+  var rP = state.reparaciones.filter(function(r) { return r.estado === 'En proceso'; });
+  // Ganancia neta de Reparaciones ENTREGADAS hoy (mismo criterio que Estadísticas: fechaEntrega,
+  // con fallback a fecha) — se suma a la ganancia de artículos para dar el número combinado del día.
+  var rEntHoy = state.reparaciones.filter(function(r) { return r.estado === 'Entregado' && (r.fechaEntrega || r.fecha) === hoy; });
+  var ganRepHoy = rEntHoy.reduce(function(s, r) { return s + (parseFloat(r.precioReparacion) || 0) - (parseFloat(r.costoRepuesto) || 0); }, 0);
+  var ganArtHoy = tH - cH;
+  // "Vendido hoy" es la venta total del día (lo que se factura, no lo que entró en efectivo/transferencia).
+  // Si hoy se generaron ventas con cobro parcial todavía sin cobrar, se aclara acá para que no se
+  // confunda con lo que realmente entró a la Caja de hoy (esa sí solo suma lo efectivamente cobrado).
+  var saldoPendHoy = vH.reduce(function(s, v) { return s + ((parseFloat(v.saldoPendiente) || 0) > 0 && !v.cobradoSaldo ? parseFloat(v.saldoPendiente) : 0); }, 0);
+  el('kH').textContent = fm(tH);
+  el('kHs').textContent = vH.length + ' operación' + (vH.length !== 1 ? 'es' : '') + ' · margen ' + mH.toFixed(0) + '%' + (saldoPendHoy > 0 ? ' · ' + fm(saldoPendHoy) + ' aún sin cobrar' : '');
+  el('kGv').textContent = fm(ganArtHoy + ganRepHoy);
+  el('kG').textContent = 'Artículos: ' + fm(ganArtHoy) + ' · Reparaciones: ' + fm(ganRepHoy);
+  el('kS').textContent = fm(tS);
+  el('kSs').textContent = vS.length + ' venta' + (vS.length !== 1 ? 's' : '');
+  el('kM').textContent = mS.toFixed(0) + '%';
+  var ticketProm = vS.length ? tS / vS.length : 0;
+  if (el('kTicket')) el('kTicket').textContent = fm(ticketProm);
+
+  // Necesita tu atención: en proceso / listas para retirar / stock bajo (mismo criterio que Stock:
+  // cantidad > 0 y <= stockMinimo, que ya es editable por producto en esa solapa) / caja de hoy sin cerrar
+  var rListo = state.reparaciones.filter(function(r) { return r.estado === 'Listo'; });
+  var bajoStock = state.stock.filter(function(s) { var c = parseInt(s.cantidad) || 0; var m = parseInt(s.stockMinimo) || 3; return c > 0 && c <= m; });
+  if (el('kProc')) el('kProc').textContent = rP.length;
+  if (el('kListo')) el('kListo').textContent = rListo.length;
+  if (el('kStockBajo')) el('kStockBajo').textContent = bajoStock.length;
+  // Hovercards: al pasar el mouse, mostrar el detalle sin tener que ir a la pestaña correspondiente.
+  function _hcRep(arr) {
+    if (!arr.length) return '<div class="tm">Sin pendientes</div>';
+    return arr.slice(0, 10).map(function(r) { return '<div class="hcrow"><span>' + r.cliente + '</span><span class="tm">' + r.equipo + '</span></div>'; }).join('');
+  }
+  if (el('popProc')) el('popProc').innerHTML = '<div class="hctitle">En proceso</div>' + _hcRep(rP);
+  if (el('popListo')) el('popListo').innerHTML = '<div class="hctitle">Listas para retirar</div>' + _hcRep(rListo);
+  if (el('popStockBajo')) {
+    var top10 = bajoStock.slice().sort(function(a, b) { return (parseInt(a.cantidad) || 0) - (parseInt(b.cantidad) || 0); }).slice(0, 10);
+    el('popStockBajo').innerHTML = '<div class="hctitle">Stock bajo (primeros 10)</div>' + (top10.length
+      ? top10.map(function(s) { return '<div class="hcrow"><span>' + s.nombre + '</span><span class="tw mono">' + (parseInt(s.cantidad) || 0) + '</span></div>'; }).join('')
+      : '<div class="tm">Sin artículos bajo mínimo</div>');
+  }
+
+  var cd = calcCajaDia(hoy);
+  window._cajaMediosHoy = cd.medios; window._cajaTotHoy = cd.total;
+  var cierreHoyExiste = state.cierres.some(function(c) { return c.fecha === hoy; });
+  if (el('kCajaHoy')) {
+    el('kCajaHoy').textContent = fm(cd.total);
+    el('kCajaHoy').className = 'big-num ' + (cierreHoyExiste ? '' : cd.total > 0 ? 'tw' : '');
+    el('kCajaHoySub').textContent = cierreHoyExiste ? 'caja de hoy, cerrada' : cd.total > 0 ? 'caja de hoy, sin cerrar' : 'caja de hoy';
+  }
+  if (el('popCajaHoy')) {
+    var mediosHoy = Object.entries(cd.medios).sort(function(a, b) { return b[1] - a[1]; });
+    el('popCajaHoy').innerHTML = '<div class="hctitle">Caja de hoy por medio</div>' + (mediosHoy.length
+      ? mediosHoy.map(function(x) { return '<div class="hcrow"><span>' + x[0] + '</span><span class="mono ts">' + fm(x[1]) + '</span></div>'; }).join('')
+      : '<div class="tm">Sin movimientos todavía</div>');
+  }
+  // La tarjeta queda visible siempre (para poder cerrar un día anterior o ver el historial
+  // aunque hoy todavía no haya ventas), solo cambia si muestra el desglose en vivo o un aviso.
+  if (el('cajaDia')) {
+    el('cajaDia').style.display = 'block';
+    el('cajaDiaContent').innerHTML = cd.total > 0
+      ? '<div style="display:flex;flex-wrap:wrap;gap:20px">' +
+        Object.entries(cd.medios).sort(function(a,b){return b[1]-a[1];}).map(function(x){return '<div class="irow" style="min-width:150px"><span class="tm">'+x[0]+'</span><span class="mono ts">'+fm(x[1])+'</span></div>';}).join('') +
+        '<div class="irow" style="min-width:150px"><span style="font-weight:700">Total</span><span class="mono ts" style="font-weight:700">'+fm(cd.total)+'</span></div></div>'
+      : '<div class="empty" style="padding:14px 0">Sin movimientos hoy todavía</div>';
+  }
+  renCierreCaja();
+
+  var tp = {};
+  vS.forEach(function(v) {
+    if (!tp[v.nombre]) tp[v.nombre] = { qty: 0, total: 0 };
+    tp[v.nombre].qty += parseInt(v.cantidad) || 0;
+    tp[v.nombre].total += (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0);
+  });
+  var arr = Object.entries(tp).sort(function(a, b) { return b[1].total - a[1].total; }).slice(0, 6);
+  if (el('kTopP')) {
+    if (arr.length) { el('kTopP').textContent = arr[0][0]; el('kTopPs').textContent = fm(arr[0][1].total); }
+    else { el('kTopP').textContent = '—'; el('kTopPs').textContent = '—'; }
+  }
+  el('topP').innerHTML = arr.length === 0 ? '<div class="empty">Sin ventas</div>' :
+    '<table><thead><tr><th>Producto</th><th>Uds.</th><th>Total</th></tr></thead><tbody>' +
+    arr.map(function(x) { return '<tr><td>' + x[0] + '</td><td class="mono">' + x[1].qty + '</td><td class="mono ts">' + fm(x[1].total) + '</td></tr>'; }).join('') +
+    '</tbody></table>';
+
+  el('repA').innerHTML = rP.length === 0 ? '<div class="empty">Sin pendientes</div>' :
+    '<table><thead><tr><th>Cliente</th><th>Equipo</th><th>Estado</th></tr></thead><tbody>' +
+    rP.map(function(r) { return '<tr><td>' + r.cliente + '</td><td style="font-size:12px;color:var(--muted)">' + r.equipo + '</td><td><span class="tag ' + (r.estado === 'Listo' ? 'tgs' : 'tgw') + '">' + r.estado + '</span></td></tr>'; }).join('') +
+    '</tbody></table>';
+
+  // Últimas ventas (más reciente arriba)
+  if (el('ultV')) {
+    var ult = state.ventas.slice().sort(function(a, b) { var ka = ventaKey(a), kb = ventaKey(b); return kb > ka ? 1 : kb < ka ? -1 : 0; }).slice(0, 8);
+    el('ultV').innerHTML = ult.length === 0 ? '<div class="empty">Sin ventas</div>' :
+      '<table><thead><tr><th>Producto</th><th>Fecha</th><th>Uds.</th><th>Total</th><th>Medio</th></tr></thead><tbody>' +
+      ult.map(function(v) {
+        return '<tr><td>' + v.nombre + '</td>' +
+          '<td class="mono tm" style="font-size:11px">' + fd(v.fecha) + (v.hora ? ' · ' + v.hora : '') + '</td>' +
+          '<td class="mono">' + v.cantidad + '</td>' +
+          '<td class="mono ts">' + fm((parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0)) + '</td>' +
+          '<td class="tm" style="font-size:12px">' + (v.medio || '—') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+}
+
+// CIERRE DE CAJA
+function _medioToCol(m) {
+  switch (m) {
+    case 'Efectivo': return 'efectivo';
+    case 'Transferencia': return 'transferencia';
+    case 'Débito': return 'debito';
+    case 'Crédito': return 'credito';
+    case 'Pago QR': return 'pagoQR';
+    default: return 'otros';
+  }
+}
+// Calcula el desglose por medio de pago de UN día puntual (ventas + reparaciones entregadas ese día)
+function calcCajaDia(fechaStr) {
+  var medios = {};
+  state.ventas.filter(function(v) { return v.fecha === fechaStr; })
+    .forEach(function(v) { medioPartes(v).forEach(function(p) { var med = p.medio || 'Otro'; medios[med] = (medios[med] || 0) + p.monto; }); });
+  state.reparaciones.filter(function(r) { return (r.fechaEntrega || r.fecha) === fechaStr && r.estado === 'Entregado'; })
+    .forEach(function(r) { repMedioPartes(r).forEach(function(p) { var med = p.medio || 'Otro'; medios[med] = (medios[med] || 0) + p.monto; }); });
+  // Saldos de ventas con cobro parcial que se terminan de cobrar este día (no el día de la venta original)
+  state.ventas.filter(function(v) { return v.fechaCobroSaldo === fechaStr && v.cobradoSaldo; })
+    .forEach(function(v) { var med = v.medioSaldo || v.medio || 'Otro'; medios[med] = (medios[med] || 0) + (parseFloat(v.saldoPendiente) || 0); });
+  var total = Object.values(medios).reduce(function(s, v) { return s + v; }, 0);
+  return { medios: medios, total: total };
+}
+function renCierreCaja() {
+  var hoy = today();
+  var cierreHoy = state.cierres.filter(function(c) { return c.fecha === hoy; })[0];
+  var btn = el('btnCerrarCaja');
+  if (btn) btn.style.display = (!cierreHoy && (window._cajaTotHoy || 0) > 0) ? '' : 'none';
+  if (el('cajaDiaContent') && cierreHoy) {
+    var partes = [
+      ['Efectivo', cierreHoy.efectivo], ['Transferencia', cierreHoy.transferencia],
+      ['Débito', cierreHoy.debito], ['Crédito', cierreHoy.credito], ['Pago QR', cierreHoy.pagoQR], ['Otros', cierreHoy.otros]
+    ].filter(function(x) { return (parseFloat(x[1]) || 0) > 0; });
+    el('cajaDiaContent').innerHTML = '<div class="alert as mb16">🔒 Caja cerrada a las ' + cierreHoy.cerradoEn +
+      ' <a href="#" onclick="reabrirCierre(\'' + cierreHoy.id + '\');return false;" style="color:inherit;text-decoration:underline;margin-left:8px">reabrir</a></div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:20px">' +
+      partes.map(function(x) { return '<div class="irow" style="min-width:150px"><span class="tm">' + x[0] + '</span><span class="mono ts">' + fm(x[1]) + '</span></div>'; }).join('') +
+      '<div class="irow" style="min-width:150px"><span style="font-weight:700">Total</span><span class="mono ts" style="font-weight:700">' + fm(cierreHoy.total) + '</span></div></div>';
+  }
+  if (el('cierresHist')) {
+    var hist = state.cierres.slice().sort(function(a, b) { return String(b.fecha).localeCompare(String(a.fecha)); }).slice(0, 7);
+    el('cierresHist').innerHTML = (!hist.length ? '' :
+      '<div class="tm" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:4px">Últimos cierres</div>' +
+      hist.map(function(c) { return '<div class="irow" style="font-size:12px"><span class="tm">' + fd(c.fecha) + ' · cerrado ' + (c.cerradoEn || '') + '</span><span class="flex ac g8"><span class="mono">' + fm(c.total) + '</span><a href="#" onclick="reabrirCierre(\'' + c.id + '\');return false;" style="color:var(--muted);font-size:11px">reabrir</a></span></div>'; }).join('')) +
+      '<div class="flex g8 ac" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">' +
+      '<input type="date" id="fechaCierreManual" class="datein">' +
+      '<button class="btn btn-g btn-sm" onclick="cerrarCaja(el(\'fechaCierreManual\').value)">Cerrar esa fecha</button>' +
+      '<span class="tm" style="font-size:11px">Por si un día se olvidan de cerrar</span></div>';
+  }
+}
+function cerrarCaja(fechaOpt) {
+  var fecha = fechaOpt || today();
+  if (!fecha) { alert('Elegí una fecha.'); return; }
+  if (state.cierres.some(function(c) { return c.fecha === fecha; })) { alert('Ese día ya tiene un cierre. Reabrilo primero si querés rehacerlo.'); return; }
+  var cd = fecha === today() && window._cajaTotHoy !== undefined ? { medios: window._cajaMediosHoy, total: window._cajaTotHoy } : calcCajaDia(fecha);
+  if (!cd.total) { alert('No hay ventas ni reparaciones entregadas ese día — nada para cerrar.'); return; }
+  if (!confirm('¿Cerrar la caja del ' + fd(fecha) + ' por ' + fm(cd.total) + '?\nUna vez cerrada, este total queda fijo aunque después carguen algo con esa misma fecha.')) return;
+  var row = { id: gid(), fecha: fecha, efectivo: 0, transferencia: 0, debito: 0, credito: 0, pagoQR: 0, otros: 0, total: cd.total, cerradoEn: nowTime() };
+  Object.keys(cd.medios).forEach(function(m) { var c = _medioToCol(m); row[c] = (row[c] || 0) + cd.medios[m]; });
+  apiPost({ accion: 'agregar', hoja: 'cierres', item: row }, function(err) {
+    if (err) return alert('Error al cerrar caja.');
+    state.cierres.push(row);
+    renCierreCaja();
+  });
+}
+function reabrirCierre(id) {
+  if (!confirm('¿Reabrir este cierre? Se borra el registro congelado y volvés a ver los números en vivo de ese día (pueden haber cambiado si cargaron algo nuevo con esa fecha desde que se cerró).')) return;
+  apiPost({ accion: 'borrar', hoja: 'cierres', id: id }, function(err) {
+    if (err) return alert('Error al reabrir.');
+    state.cierres = state.cierres.filter(function(c) { return c.id !== id; });
+    renCierreCaja();
+  });
+}
+
+// VENTAS
+function renSelProd() { /* no hace nada, lista se genera en filtrarProds */ }
+
+var _filtroProdActual = [];
+
+function filtrarProds() {
+  var busq = (el('vBusq').value || '').toLowerCase();
+  el('vProd').value = '';
+  el('iProf').style.display = 'none';
+  el('iCalc').style.display = 'none';
+  if (!busq) { el('vDropdown').style.display = 'none'; return; }
+  _filtroProdActual = state.stock.filter(function(s) {
+    return (parseInt(s.cantidad) || 0) > 0 && s.nombre.toLowerCase().indexOf(busq) >= 0;
+  });
+  if (!_filtroProdActual.length) { el('vDropdown').style.display = 'none'; return; }
+  el('vDropdown').style.display = 'block';
+  el('vDropdown').innerHTML = _filtroProdActual.map(function(s, i) {
+    return '<div onclick="selProd(' + i + ')" style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background=\'var(--surface)\'" onmouseout="this.style.background=\'\'">' +
+      s.nombre + ' <span style="color:var(--muted);font-size:11px">Stock: ' + s.cantidad + ' · ' + fm(s.costo) + '</span></div>';
+  }).join('');
+}
+
+function selProd(i) {
+  var prod = _filtroProdActual[i];
+  if (!prod) return;
+  el('vProd').value = prod.id || prod.nombre;
+  el('vBusq').value = prod.nombre;
+  el('vDropdown').style.display = 'none';
+  el('iProf').style.display = 'block';
+  el('iC').textContent = fm(prod.costo);
+  el('iPV').textContent = (parseFloat(prod.precioVenta) || 0) > 0 ? fm(prod.precioVenta) : '—';
+  el('iS').textContent = prod.cantidad + ' uds.';
+  window._prodSeleccionado = prod;
+  if ((parseFloat(prod.precioVenta) || 0) > 0) el('vPrice').value = prod.precioVenta;
+  calcV();
+}
+
+function onProd() { /* compatibilidad */ }
+
+function toggleCombinado() {
+  var c = el('vCombinado').checked;
+  el('vComboBox').style.display = c ? '' : 'none';
+  if (el('lblVPrice')) el('lblVPrice').textContent = c ? 'Monto 1er medio' : 'Precio de venta';
+  if (!c) { el('vMedio2').selectedIndex = 0; el('vMonto2').value = ''; }
+  // Pago combinado y cobro parcial no se pueden usar juntos (simplifica la caja del día)
+  if (c && el('vParcial').checked) { el('vParcial').checked = false; toggleParcial(); }
+  calcV();
+}
+function toggleParcial() {
+  var c = el('vParcial').checked;
+  el('vParcialBox').style.display = c ? '' : 'none';
+  if (c) {
+    if (el('vCombinado').checked) { el('vCombinado').checked = false; toggleCombinado(); }
+    if (!el('vFechaRecordatorio').value) {
+      var d = new Date(); d.setDate(d.getDate() + 30);
+      el('vFechaRecordatorio').value = localDateStr(d);
+    }
+  } else {
+    el('vParcialCliente').value = ''; el('vParcialWA').value = ''; el('vMontoAhora').value = '';
+    el('vSaldoCalc').value = '—'; el('vFechaRecordatorio').value = '';
+  }
+  calcV();
+}
+
+// Nota: si hay pago combinado, el monto del 2do medio se SUMA al precio (no se descuenta) —
+// "Precio de venta" pasa a ser solo la parte del 1er medio. Ver calcV() y regVenta().
+function calcV() {
+  var id = el('vProd').value;
+  var prod = state.stock.filter(function(s) { return s.id === id; })[0];
+  var precio = parseFloat(el('vPrice').value) || 0;
+  var cant = parseInt(el('vCant').value) || 1;
+  var combinado = el('vCombinado') && el('vCombinado').checked;
+  var monto2 = combinado ? (parseFloat(el('vMonto2').value) || 0) : 0;
+  if (el('vComboTotal')) el('vComboTotal').textContent = combinado ? 'Total de la venta: ' + fm(precio * cant + monto2) : '';
+  if (!prod || precio <= 0) { el('iCalc').style.display = 'none'; return; }
+  var total = precio * cant + monto2;
+  var costoTot = (parseFloat(prod.costo) || 0) * cant;
+  var gan = total - costoTot;
+  var marg = costoTot > 0 ? (gan / costoTot * 100) : 0;
+  el('iCalc').style.display = 'block';
+  el('cGan').textContent = fm(gan);
+  el('cMar').textContent = marg.toFixed(0) + '%';
+  el('cMar').style.color = marg >= 80 ? 'var(--success)' : 'var(--warning)';
+  // Alerta de margen bajo / venta por debajo del costo
+  var costo = parseFloat(prod.costo) || 0;
+  var w = el('cWarn');
+  if (w) {
+    if (total < costoTot) {
+      w.style.display = 'block'; w.style.color = 'var(--danger)';
+      w.textContent = '⚠ Estás vendiendo POR DEBAJO del costo (' + fm(costoTot) + ').';
+    } else if (marg < 30) {
+      w.style.display = 'block'; w.style.color = 'var(--warning)';
+      w.textContent = '⚠ Margen bajo (menos del 30%). Costo: ' + fm(costoTot) + '.';
+    } else {
+      w.style.display = 'none'; w.textContent = '';
+    }
+  }
+  if (el('vParcial') && el('vParcial').checked && el('vSaldoCalc')) {
+    var montoAhoraPrev = parseFloat(el('vMontoAhora').value) || 0;
+    el('vSaldoCalc').value = fm(total - montoAhoraPrev);
+  }
+}
+function regVenta() {
+  var id = el('vProd').value;
+  var prod = window._prodSeleccionado;
+  var cant = parseInt(el('vCant').value) || 0;
+  var precio = parseFloat(el('vPrice').value) || 0;
+  if (!prod || !precio || cant <= 0) return showMsg('msgV', 'd', 'Completá producto, cantidad y precio.');
+  if (cant > (parseInt(prod.cantidad) || 0)) return showMsg('msgV', 'd', 'Stock insuficiente. Disponible: ' + prod.cantidad);
+  if (!el('vMedio').value) return showMsg('msgV', 'd', 'Elegí el medio de pago.');
+  var combinado = el('vCombinado') && el('vCombinado').checked;
+  var parcial = el('vParcial') && el('vParcial').checked;
+  var medio2 = '', montoMedio1 = precio * cant, montoMedio2 = 0, medioLabel = el('vMedio').value;
+  if (combinado) {
+    medio2 = el('vMedio2').value;
+    montoMedio2 = parseFloat(el('vMonto2').value) || 0;
+    if (!medio2) return showMsg('msgV', 'd', 'Elegí el segundo medio de pago.');
+    if (medio2 === el('vMedio').value) return showMsg('msgV', 'd', 'Elegí dos medios distintos.');
+    if (montoMedio2 <= 0) return showMsg('msgV', 'd', 'Ingresá el monto del segundo medio.');
+    medioLabel = el('vMedio').value + ' + ' + medio2;
+  }
+  var total = montoMedio1 + montoMedio2; // total real de la venta (precio*cant, + monto2 si es combinado)
+  var precioEfectivoUnit = total / cant; // precio por unidad ya incluyendo ambos medios — la Ganancia se calcula SIEMPRE sobre el total real, cobrado o no
+
+  // Cobro parcial: se registra igual el total/margen real de la venta, pero a la Caja del día
+  // solo entra lo que efectivamente se cobra hoy (ver medioPartes/calcCajaDia). El resto queda
+  // como saldo pendiente con un recordatorio, visible en "Cobros pendientes".
+  var clienteParcial = '', waParcial = '', montoAhora = 0, saldoPendiente = 0, fechaRecordatorio = '';
+  if (parcial) {
+    clienteParcial = (el('vParcialCliente').value || '').trim();
+    waParcial = (el('vParcialWA').value || '').trim();
+    montoAhora = parseFloat(el('vMontoAhora').value) || 0;
+    fechaRecordatorio = el('vFechaRecordatorio').value || '';
+    if (!clienteParcial) return showMsg('msgV', 'd', 'Ingresá el nombre del cliente para el cobro parcial.');
+    if (montoAhora <= 0 || montoAhora >= total) return showMsg('msgV', 'd', 'El monto cobrado ahora tiene que ser mayor a $0 y menor al total de la venta (' + fm(total) + ').');
+    if (!fechaRecordatorio) return showMsg('msgV', 'd', 'Elegí una fecha de recordatorio para cobrar el saldo.');
+    saldoPendiente = total - montoAhora;
+  }
+
+  if (precioEfectivoUnit < (parseFloat(prod.costo) || 0) && !confirm('Estás vendiendo POR DEBAJO del costo (' + fm(prod.costo) + ').\n¿Registrar igual?')) return;
+  var venta = {
+    id: gid(), fecha: today(), hora: nowTime(), nombre: prod.nombre, cantidad: cant, precioVenta: precioEfectivoUnit, costoUnit: parseFloat(prod.costo) || 0,
+    medio: medioLabel, medio1: el('vMedio').value, montoMedio1: parcial ? montoAhora : montoMedio1, medio2: medio2, montoMedio2: montoMedio2,
+    cliente: parcial ? clienteParcial : '', clienteWA: parcial ? waParcial : '',
+    saldoPendiente: saldoPendiente, fechaRecordatorio: fechaRecordatorio, cobradoSaldo: !parcial, fechaCobroSaldo: '', medioSaldo: ''
+  };
+  apiPost({ accion: 'agregar', hoja: 'ventas', item: venta }, function(err) {
+    if (err) return showMsg('msgV', 'd', 'Error al guardar.');
+    apiPost({ accion: 'actualizar', hoja: 'stock', id: prod.id, campo: 'cantidad', valor: (parseInt(prod.cantidad) || 0) - cant }, function() {});
+    state.ventas.unshift(venta);
+    prod.cantidad = (parseInt(prod.cantidad) || 0) - cant;
+    renSelProd(); renVentas(); renStock(); renDash();
+    el('vBusq').value = ''; el('vProd').value = ''; el('vPrice').value = ''; el('vCant').value = '1';
+    el('vMedio').selectedIndex = 0;
+    el('vCombinado').checked = false; el('vComboBox').style.display = 'none'; el('vMedio2').selectedIndex = 0; el('vMonto2').value = '';
+    el('vParcial').checked = false; toggleParcial();
+    if (el('lblVPrice')) el('lblVPrice').textContent = 'Precio de venta';
+    el('iProf').style.display = 'none'; el('iCalc').style.display = 'none';
+    showMsg('msgV', 's', '✓ Venta registrada — ' + fm(total) + (parcial ? ' (cobrado ahora ' + fm(montoAhora) + ', saldo ' + fm(saldoPendiente) + ')' : ''));
+  });
+}
+var _ventasVisible = 20;
+function renVentas(resetPag) {
+  if (resetPag) _ventasVisible = 20;
+  var desdeEl = el('vDesde'), hastaEl = el('vHasta');
+  var desde = desdeEl && desdeEl.value ? new Date(desdeEl.value + 'T00:00:00') : null;
+  var hasta = hastaEl && hastaEl.value ? new Date(hastaEl.value + 'T23:59:59') : null;
+  var buscar = (el('bVentas') ? (el('bVentas').value || '') : '').toLowerCase().trim();
+  var vs = state.ventas.filter(function(v) {
+    if (desde && new Date(v.fecha + 'T12:00:00') < desde) return false;
+    if (hasta && new Date(v.fecha + 'T12:00:00') > hasta) return false;
+    if (buscar && String(v.nombre || '').toLowerCase().indexOf(buscar) < 0) return false;
+    return true;
+  });
+  // Ordenar de más reciente a más antigua (por fecha + hora; la última queda arriba aunque refresques)
+  vs.sort(function(a, b) { var ka = ventaKey(a), kb = ventaKey(b); return kb > ka ? 1 : kb < ka ? -1 : 0; });
+  if (el('ventasRes')) {
+    var factFiltro = vs.reduce(function(s, v) { return s + (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0); }, 0);
+    el('ventasRes').textContent = vs.length + ' venta' + (vs.length !== 1 ? 's' : '') + (vs.length ? ' · ' + fm(factFiltro) : '');
+  }
+  if (!vs.length) { el('tVentas').innerHTML = '<div class="empty">Sin ventas</div>'; return; }
+  var total = vs.length;
+  var visibles = vs.slice(0, _ventasVisible);
+  var filas = visibles.map(function(v) {
+    var m = (parseFloat(v.costoUnit) || 0) > 0 ? ((parseFloat(v.precioVenta) - parseFloat(v.costoUnit)) / parseFloat(v.costoUnit) * 100) : 0;
+    return '<tr><td><div>' + v.nombre + '</div><div style="font-size:11px;color:var(--muted)">' + fd(v.fecha) + (v.hora ? ' · ' + v.hora : '') + '</div></td>' +
+      '<td class="mono">' + v.cantidad + '</td>' +
+      '<td class="mono ts">' + fm((parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0)) + '</td>' +
+      '<td class="mono ' + (m >= 80 ? 'ts' : 'tw') + '">' + m.toFixed(0) + '%</td>' +
+      '<td>' + (v.medio2
+        ? '<span class="tag tga" title="' + fm(v.montoMedio1) + ' ' + (v.medio1 || v.medio) + ' + ' + fm(v.montoMedio2) + ' ' + v.medio2 + '">' + (v.medio1 || v.medio) + ' + ' + v.medio2 + '</span>'
+        : '<select class="esel" onchange="updMedioVenta(\'' + v.id + '\',this.value)">' +
+          ['Efectivo','Transferencia','Débito','Crédito','Pago QR'].map(function(m) { return '<option' + (v.medio === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') +
+          '</select>') +
+      '</td>' +
+      '<td><button class="btn btn-sm" style="background:#1f0000;color:var(--danger);padding:4px 8px" onclick="borrarVenta(\'' + v.id + '\')">✕</button></td></tr>';
+  }).join('');
+  var verMas = '';
+  if (total > _ventasVisible) {
+    verMas = '<div style="padding:14px;text-align:center;border-top:1px solid var(--border)">' +
+      '<button class="btn btn-g btn-sm" onclick="_ventasVisible+=20;renVentas()">Ver más (' + (total - _ventasVisible) + ' restantes)</button>' +
+      '</div>';
+  }
+  el('tVentas').innerHTML = '<table><thead><tr><th>Producto</th><th>Uds.</th><th>Total</th><th>Margen</th><th>Medio</th><th></th></tr></thead><tbody>' + filas + '</tbody></table>' + verMas;
+  renCobrosPendientes();
+}
+
+// COBROS PENDIENTES (ventas con cobro parcial cuyo saldo todavía no se cobró)
+function renCobrosPendientes() {
+  if (!el('cobrosPendCard')) return;
+  var hoy = today();
+  var pend = state.ventas.filter(function(v) { return (parseFloat(v.saldoPendiente) || 0) > 0 && !v.cobradoSaldo; });
+  pend.sort(function(a, b) { return String(a.fechaRecordatorio || '').localeCompare(String(b.fechaRecordatorio || '')); });
+  el('cobrosPendCard').style.display = pend.length ? '' : 'none';
+  if (!pend.length) return;
+  var medios = ['Efectivo', 'Transferencia', 'Débito', 'Crédito', 'Pago QR'];
+  el('cobrosPend').innerHTML = pend.map(function(v) {
+    var vencida = v.fechaRecordatorio && v.fechaRecordatorio <= hoy;
+    var wa = waLinkSaldo(v.clienteWA, v.cliente, v.saldoPendiente);
+    return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">' +
+      '<div>' +
+        '<div style="font-weight:600">' + (v.cliente || '(sin nombre)') + '</div>' +
+        '<div style="font-size:12px;color:var(--muted)">' + v.nombre + ' · vendido ' + fd(v.fecha) + '</div>' +
+        '<div style="font-size:12px;margin-top:2px" class="' + (vencida ? 'td' : 'tm') + '">' + (vencida ? '⚠ vencido — ' : 'recordatorio ') + fd(v.fechaRecordatorio) + '</div>' +
+        (wa ? '<a href="' + wa + '" target="_blank" style="color:#25D366;text-decoration:none;font-size:11px;display:inline-block;margin-top:2px">💬 recordar por WhatsApp</a>' : '') +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div class="mono tw" style="font-weight:600;margin-bottom:6px">' + fm(v.saldoPendiente) + '</div>' +
+        '<select id="ms_' + v.id + '" class="esel" style="margin-bottom:4px">' + medios.map(function(m) { return '<option' + (v.medio === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select>' +
+        '<button class="btn btn-p btn-sm" style="display:block;margin-top:4px" onclick="cobrarSaldo(\'' + v.id + '\')">✓ Cobrado</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+function cobrarSaldo(id) {
+  var v = state.ventas.filter(function(x) { return x.id === id; })[0];
+  if (!v) return;
+  var sel = el('ms_' + id);
+  var medio = sel ? sel.value : (v.medio || 'Efectivo');
+  if (!confirm('¿Confirmar el cobro del saldo de ' + fm(v.saldoPendiente) + ' (' + medio + ')?')) return;
+  var hoy = today();
+  apiPost({ accion: 'actualizar', hoja: 'ventas', id: id, campo: 'cobradoSaldo', valor: true }, function() {});
+  apiPost({ accion: 'actualizar', hoja: 'ventas', id: id, campo: 'fechaCobroSaldo', valor: hoy }, function() {});
+  apiPost({ accion: 'actualizar', hoja: 'ventas', id: id, campo: 'medioSaldo', valor: medio }, function(err) {
+    if (err) return alert('Error al registrar el cobro.');
+    v.cobradoSaldo = true; v.fechaCobroSaldo = hoy; v.medioSaldo = medio;
+    renVentas(); renDash();
+    showMsg('msgV', 's', '✓ Saldo cobrado — ' + fm(v.saldoPendiente));
+  });
+}
+// Mensaje de WhatsApp recordando un saldo pendiente de una venta con cobro parcial
+function waLinkSaldo(wa, nombre, saldo) {
+  if (!wa) return null;
+  var digits = String(wa).replace(/\D/g, '');
+  if (digits.charAt(0) === '0') digits = digits.slice(1);
+  if (digits.slice(0, 2) !== '54') digits = '54' + digits;
+  var msg = encodeURIComponent('Hola ' + (nombre || '') + '! Te escribimos de Tecnopuerto para recordarte el saldo pendiente de ' + fm(saldo) + '. ¡Gracias!');
+  return 'https://wa.me/' + digits + '?text=' + msg;
+}
+
+function updMedioVenta(id, medio) {
+  var v = state.ventas.filter(function(x) { return x.id === id; })[0];
+  if (!v || v.medio === medio) return;
+  v.medio = medio;
+  apiPost({ accion: 'actualizar', hoja: 'ventas', id: id, campo: 'medio', valor: medio }, function(err) {
+    if (!err) { renDash(); renStats(); }
+  });
+}
+function updMedioRep(id, medio) {
+  var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  if (!r || r.medio === medio) return;
+  r.medio = medio;
+  apiPost({ accion: 'actualizar', hoja: 'reparaciones', id: id, campo: 'medio', valor: medio }, function(err) {
+    if (!err) { renDash(); renStats(); }
+  });
+}
+
+// GASTOS
+var GASTO_CATS = ['Mercadería/Stock', 'Alquiler', 'Servicios', 'Sueldos', 'Impuestos', 'Otros'];
+function regGasto() {
+  var fecha = el('gFecha').value || today();
+  var categoria = el('gCat').value;
+  var detalle = (el('gDet').value || '').trim();
+  var monto = parseFloat(el('gMonto').value) || 0;
+  var medio = el('gMedio').value;
+  if (!categoria) return showMsg('msgG', 'd', 'Elegí una categoría.');
+  if (monto <= 0) return showMsg('msgG', 'd', 'Ingresá un monto válido.');
+  if (!medio) return showMsg('msgG', 'd', 'Elegí el medio de pago.');
+  var gasto = { id: gid(), fecha: fecha, categoria: categoria, detalle: detalle, monto: monto, medio: medio };
+  apiPost({ accion: 'agregar', hoja: 'gastos', item: gasto }, function(err) {
+    if (err) return showMsg('msgG', 'd', 'Error al guardar.');
+    state.gastos.unshift(gasto);
+    renGastos(); renStats();
+    el('gDet').value = ''; el('gMonto').value = '';
+    el('gCat').selectedIndex = 0; el('gMedio').selectedIndex = 0; el('gFecha').value = today();
+    showMsg('msgG', 's', '✓ Gasto registrado — ' + fm(monto));
+  });
+}
+function renGastos() {
+  if (el('gFecha') && !el('gFecha').value) el('gFecha').value = today();
+  var buscar = (el('bGastos') ? (el('bGastos').value || '') : '').toLowerCase();
+  var arr = state.gastos.slice()
+    .filter(function(g) { return !buscar || String(g.detalle || '').toLowerCase().indexOf(buscar) >= 0 || String(g.categoria || '').toLowerCase().indexOf(buscar) >= 0; })
+    .sort(function(a, b) { return String(b.fecha || '').localeCompare(String(a.fecha || '')); });
+  var mes = today().slice(0, 7);
+  var delMes = state.gastos.filter(function(g) { return String(g.fecha).slice(0, 7) === mes; });
+  var totMes = delMes.reduce(function(s, g) { return s + (parseFloat(g.monto) || 0); }, 0);
+  var porCat = {};
+  delMes.forEach(function(g) { var c = g.categoria || 'Otros'; porCat[c] = (porCat[c] || 0) + (parseFloat(g.monto) || 0); });
+  if (el('gResumen')) {
+    var detCat = Object.entries(porCat).sort(function(a, b) { return b[1] - a[1]; }).map(function(x) { return x[0] + ' ' + fm(x[1]); }).join(' · ');
+    el('gResumen').innerHTML = 'Este mes: <span class="mono tw">' + fm(totMes) + '</span>' + (detCat ? ' · ' + detCat : '');
+  }
+  if (!el('tGastos')) return;
+  if (!arr.length) { el('tGastos').innerHTML = '<div class="empty">Sin gastos cargados</div>'; return; }
+  el('tGastos').innerHTML = '<table><thead><tr><th>Fecha</th><th>Categoría</th><th>Detalle</th><th>Monto</th><th>Medio</th><th></th></tr></thead><tbody>' +
+    arr.map(function(g) {
+      return '<tr>' +
+        '<td class="mono" style="font-size:11px;color:var(--muted)">' + fd(g.fecha) + '</td>' +
+        '<td><select class="esel" onchange="updGasto(\'' + g.id + '\',\'categoria\',this.value)">' + GASTO_CATS.map(function(c) { return '<option' + (g.categoria === c ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></td>' +
+        '<td><input class="esel" style="width:170px;font-size:12px" value="' + String(g.detalle || '').replace(/"/g, '&quot;') + '" onblur="updGasto(\'' + g.id + '\',\'detalle\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()"></td>' +
+        '<td class="mono ts"><input type="number" class="esel" style="width:90px" value="' + (parseFloat(g.monto) || 0) + '" onblur="updGasto(\'' + g.id + '\',\'monto\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()"></td>' +
+        '<td><select class="esel" onchange="updGasto(\'' + g.id + '\',\'medio\',this.value)">' + ['Efectivo', 'Transferencia', 'Débito', 'Crédito', 'Pago QR'].map(function(m) { return '<option' + (g.medio === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></td>' +
+        '<td><button class="btn btn-sm" style="background:#1f0000;color:var(--danger);padding:4px 8px" onclick="borrarGasto(\'' + g.id + '\')">✕</button></td></tr>';
+    }).join('') + '</tbody></table>';
+}
+function updGasto(id, campo, valor) {
+  var g = state.gastos.filter(function(x) { return x.id === id; })[0];
+  if (!g) return;
+  if (campo === 'monto') valor = parseFloat(valor) || 0;
+  if (g[campo] === valor) return;
+  g[campo] = valor;
+  apiPost({ accion: 'actualizar', hoja: 'gastos', id: id, campo: campo, valor: valor }, function(err) {
+    if (!err) { renGastos(); renStats(); }
+  });
+}
+function borrarGasto(id) {
+  if (!confirm('¿Borrar este gasto?')) return;
+  apiPost({ accion: 'borrar', hoja: 'gastos', id: id }, function(err) {
+    if (err) return alert('Error al borrar.');
+    state.gastos = state.gastos.filter(function(g) { return g.id !== id; });
+    renGastos(); renStats();
+  });
+}
+function borrarVenta(id) {
+  var venta = state.ventas.filter(function(v) { return v.id === id; })[0];
+  if (!venta) return;
+  // Motivo OPCIONAL: si cancela el prompt no se borra; si deja vacío, se borra igual
+  var motivo = prompt('Borrar venta de "' + venta.nombre + '".\nMotivo (opcional, podés dejarlo vacío):', '');
+  if (motivo === null) return;
+  apiPost({ accion: 'borrarVenta', id: id, motivo: motivo }, function(err) {
+    if (err) return alert('Error al borrar.');
+    if (venta) {
+      var prod = state.stock.filter(function(s) {
+        return String(s.nombre).toUpperCase().trim() === String(venta.nombre).toUpperCase().trim();
+      })[0];
+      if (prod) {
+        var nuevaCant = (parseInt(prod.cantidad) || 0) + (parseInt(venta.cantidad) || 0);
+        apiPost({ accion: 'actualizarStockPorNombre', nombre: venta.nombre, valor: nuevaCant }, function() {});
+        prod.cantidad = nuevaCant;
+      }
+    }
+    state.ventas = state.ventas.filter(function(v) { return v.id !== id; });
+    renVentas(); renDash(); renStock(); renSelProd();
+  });
+}
+
+// REPARACIONES
+// Formulario #fRep se reusa para crear Y editar (ver editarRep) — editandoRepId
+// distingue el modo. No siempre se sabe modelo/valor final al recibir el equipo,
+// así que hace falta poder volver a completarlo/corregirlo después.
+function nuevoRepForm() {
+  editandoRepId = null;
+  ['rCli', 'rWA', 'rEq', 'rProb', 'rPrc', 'rNot'].forEach(function(id) { el(id).value = ''; });
+  el('rCos').value = '0';
+  if (el('btnGuardarRep')) el('btnGuardarRep').textContent = 'Guardar reparación';
+  tog('fRep');
+}
+function editarRep(id) {
+  var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  if (!r) return;
+  editandoRepId = id;
+  el('rCli').value = r.cliente || '';
+  el('rWA').value = r.whatsapp || '';
+  el('rEq').value = r.equipo || '';
+  el('rProb').value = r.problema || '';
+  el('rPrc').value = parseFloat(r.precioReparacion) || 0;
+  el('rCos').value = parseFloat(r.costoRepuesto) || 0;
+  el('rNot').value = r.notas || '';
+  if (el('btnGuardarRep')) el('btnGuardarRep').textContent = 'Guardar cambios';
+  el('fRep').style.display = 'block';
+  el('fRep').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function guardarRep() {
+  // Precio OPCIONAL a propósito: no siempre se puede presupuestar al toque (modelo fuera de la
+  // lista de precios, hay que consultar al técnico). Sin precio, la reparación entra en
+  // "Esperando presupuesto" en vez de "En proceso" — ver renRepEspera / [[crm-reparaciones-ia-agentica]].
+  var campos = { cliente: el('rCli').value, whatsapp: el('rWA').value, equipo: el('rEq').value, problema: el('rProb').value, precioReparacion: parseFloat(el('rPrc').value) || 0, costoRepuesto: parseFloat(el('rCos').value) || 0, tecnico: el('rTec').value, notas: el('rNot').value };
+  if (!campos.cliente || !campos.equipo) return alert('Completá cliente y equipo.');
+
+  if (editandoRepId) {
+    var id = editandoRepId;
+    var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+    if (!r) return;
+    // Si estaba esperando presupuesto y ahora se cargó un precio, pasa sola a "En proceso".
+    if (r.estado === 'Esperando presupuesto' && campos.precioReparacion > 0) campos.estado = 'En proceso';
+    Object.keys(campos).forEach(function(campo) {
+      if (r[campo] === campos[campo]) return;
+      r[campo] = campos[campo];
+      apiPost({ accion: 'actualizar', hoja: 'reparaciones', id: id, campo: campo, valor: campos[campo] }, function(err) { if (err) console.error('Error al actualizar ' + campo); });
+    });
+    editandoRepId = null;
+    if (el('btnGuardarRep')) el('btnGuardarRep').textContent = 'Guardar reparación';
+    renRep(); renDash();
+    ['rCli', 'rWA', 'rEq', 'rProb', 'rPrc', 'rNot'].forEach(function(id2) { el(id2).value = ''; });
+    el('rCos').value = '0'; el('fRep').style.display = 'none';
+    return;
+  }
+
+  var rep = { id: gid(), fecha: today(), estado: campos.precioReparacion > 0 ? 'En proceso' : 'Esperando presupuesto' };
+  Object.keys(campos).forEach(function(k) { rep[k] = campos[k]; });
+  apiPost({ accion: 'agregar', hoja: 'reparaciones', item: rep }, function(err) {
+    if (err) return alert('Error al guardar.');
+    state.reparaciones.unshift(rep);
+    renRep(); renDash();
+    ['rCli', 'rWA', 'rEq', 'rProb', 'rPrc', 'rNot'].forEach(function(id) { el(id).value = ''; });
+    el('rCos').value = '0'; el('fRep').style.display = 'none';
+  });
+}
+function setFR(f, btn) {
+  filtroRep = f;
+  document.querySelectorAll('#fReps button').forEach(function(b) { b.className = 'btn btn-g btn-sm'; });
+  btn.className = 'btn btn-p btn-sm';
+  if (el('repActivasWrap')) el('repActivasWrap').style.display = f === 'activas' ? 'grid' : 'none';
+  if (el('repTablaWrap')) el('repTablaWrap').style.display = f === 'activas' ? 'none' : 'block';
+  renRep();
+}
+function updEstado(id, estado) {
+  var rPrev = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  // Entregado pide medio de pago antes de guardar nada — ver abrirModalEntrega/confirmarEntrega.
+  // Si ya estaba Entregado (re-selección sin cambio real), no reabre el modal.
+  if (estado === 'Entregado') {
+    if (rPrev && rPrev.estado !== 'Entregado') {
+      if (!(parseFloat(rPrev.costoRepuesto) > 0)) {
+        alert('Cargá el costo técnico antes de marcar como Entregado.');
+        renRep();
+        return;
+      }
+      abrirModalEntrega(id);
+    }
+    return;
+  }
+  // Se guarda cuándo pasó a "Listo" (solo la primera vez) para poder mostrar la antigüedad
+  // en esa columna — cuánto hace que está esperando que la retiren, no cuánto hace que ingresó.
+  var pasaAListo = estado === 'Listo' && rPrev && rPrev.estado !== 'Listo';
+  apiPost({ accion: 'actualizar', hoja: 'reparaciones', id: id, campo: 'estado', valor: estado }, function(err) {
+    if (err) return alert('Error.');
+    var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+    if (r) r.estado = estado;
+    if (pasaAListo) {
+      var hoyStr2 = today();
+      if (r) r.fechaListo = hoyStr2;
+      apiPost({ accion: 'actualizar', hoja: 'reparaciones', id: id, campo: 'fechaListo', valor: hoyStr2 }, function() {});
+    }
+    renRep(); renDash();
+  });
+}
+// ── Modal de entrega: medio de pago (simple o dividido) al marcar Entregado ──
+var modalEntregaId = null;
+function abrirModalEntrega(id) {
+  var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  if (!r) return;
+  modalEntregaId = id;
+  el('emCliente').textContent = r.cliente + ' — ' + r.equipo;
+  el('emTotal').textContent = fm(r.precioReparacion);
+  el('emMedio1').selectedIndex = 0;
+  el('emCombinado').checked = false;
+  el('emMedio2').selectedIndex = 0;
+  el('emMonto2').value = '';
+  el('emResumen').textContent = '';
+  el('emComboBox').style.display = 'none';
+  el('modalEntrega').style.display = 'flex';
+}
+// Al cancelar no se tocó el estado en `state`, así que basta con re-renderizar para que
+// el <select> de estado vuelva a mostrar el valor real (no el que el usuario acaba de tocar).
+function cancelarEntrega() {
+  modalEntregaId = null;
+  el('modalEntrega').style.display = 'none';
+  renRep();
+}
+function toggleEmCombinado() {
+  el('emComboBox').style.display = el('emCombinado').checked ? 'grid' : 'none';
+  calcEmTotal();
+}
+function calcEmTotal() {
+  var r = state.reparaciones.filter(function(x) { return x.id === modalEntregaId; })[0];
+  if (!r || !el('emCombinado').checked) { if (el('emResumen')) el('emResumen').textContent = ''; return; }
+  var total = parseFloat(r.precioReparacion) || 0;
+  var m2 = parseFloat(el('emMonto2').value) || 0;
+  var m1 = total - m2;
+  el('emResumen').textContent = m1 >= 0 ? (fm(m1) + ' + ' + fm(m2) + ' = ' + fm(total)) : 'El segundo monto no puede superar el total (' + fm(total) + ')';
+  el('emResumen').style.color = m1 >= 0 ? '' : 'var(--danger)';
+}
+function confirmarEntrega() {
+  var id = modalEntregaId;
+  var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  if (!r) return cancelarEntrega();
+  var medio1 = el('emMedio1').value;
+  if (!medio1) return alert('Elegí el medio de pago.');
+  var combinado = el('emCombinado').checked;
+  var total = parseFloat(r.precioReparacion) || 0;
+  var medio2 = '', montoMedio1 = '', montoMedio2 = '';
+  if (combinado) {
+    medio2 = el('emMedio2').value;
+    if (!medio2) return alert('Elegí el segundo medio de pago.');
+    montoMedio2 = parseFloat(el('emMonto2').value) || 0;
+    montoMedio1 = total - montoMedio2;
+    if (montoMedio2 <= 0 || montoMedio1 < 0) return alert('Revisá los montos: no pueden superar el total (' + fm(total) + ').');
+  }
+  // Reseña por WhatsApp — misma lógica de antes (primera vez que pasa a Entregado), disparada
+  // sincrónica con el click para que el navegador no la bloquee como popup.
+  if (r.estado !== 'Entregado' && r.whatsapp) window.open(waLinkResena(r.whatsapp, r.cliente), '_blank');
+  el('modalEntrega').style.display = 'none';
+  var hoyStr = today();
+  var campos = { estado: 'Entregado', fechaEntrega: hoyStr, medio: medio1, medio1: medio1, montoMedio1: montoMedio1, medio2: medio2, montoMedio2: montoMedio2 };
+  var pendientes = Object.keys(campos).length;
+  Object.keys(campos).forEach(function(campo) {
+    apiPost({ accion: 'actualizar', hoja: 'reparaciones', id: id, campo: campo, valor: campos[campo] }, function(err) {
+      if (!err) r[campo] = campos[campo];
+      pendientes--;
+      if (pendientes === 0) { modalEntregaId = null; renRep(); renDash(); renStats(); }
+    });
+  });
+}
+// Filtro compartido de Reparaciones (usado por renRep y exportRepXL, para que la
+// exportación siempre respete exactamente lo que se ve en pantalla)
+function _filtrarReparaciones() {
+  var buscar = (el('bRep') ? (el('bRep').value || '') : '').toLowerCase();
+  var desde = el('rDesde') && el('rDesde').value ? el('rDesde').value : null;
+  var hasta = el('rHasta') && el('rHasta').value ? el('rHasta').value : null;
+  var ord = { 'Esperando presupuesto': 0, 'En proceso': 1, 'Listo': 2, 'Abandonado': 3, 'Entregado': 4 };
+  return state.reparaciones
+    .filter(function(r) { return filtroRep === 'todos' || (filtroRep === 'activas' ? (r.estado === 'Esperando presupuesto' || r.estado === 'En proceso' || r.estado === 'Listo') : r.estado === filtroRep); })
+    .filter(function(r) { if (desde && r.fecha < desde) return false; if (hasta && r.fecha > hasta) return false; return true; })
+    .filter(function(r) {
+      if (!buscar) return true;
+      if (r.cliente.toLowerCase().indexOf(buscar) >= 0 || r.equipo.toLowerCase().indexOf(buscar) >= 0) return true;
+      if ((r.tecnico || '').toLowerCase().indexOf(buscar) >= 0) return true;
+      var precio = String(parseFloat(r.precioReparacion) || 0);
+      var costo = String(parseFloat(r.costoRepuesto) || 0);
+      return precio.indexOf(buscar) >= 0 || costo.indexOf(buscar) >= 0;
+    })
+    .slice().sort(function(a, b) { return (ord[a.estado] !== undefined ? ord[a.estado] : 99) - (ord[b.estado] !== undefined ? ord[b.estado] : 99); });
+}
+function exportRepXL() {
+  var fil = _filtrarReparaciones();
+  if (!fil.length) { alert('No hay reparaciones para exportar con los filtros actuales.'); return; }
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    [['Fecha', 'Cliente', 'WhatsApp', 'Equipo', 'Problema', 'Precio', 'Costo técnico', 'Ganancia', 'Recibió', 'Estado', 'Medio', 'Notas']].concat(
+      fil.map(function(r) { return [r.fecha, r.cliente, r.whatsapp || '', r.equipo, r.problema, parseFloat(r.precioReparacion) || 0, parseFloat(r.costoRepuesto) || 0, (parseFloat(r.precioReparacion) || 0) - (parseFloat(r.costoRepuesto) || 0), r.tecnico, r.estado, _medioLabelRep(r), r.notas || '']; })
+    )), 'Reparaciones');
+  XLSX.writeFile(wb, 'Tecnopuerto_Reparaciones_' + today() + '.xlsx');
+}
+function renRep() {
+  var eT = { 'Esperando presupuesto': 'tgm', 'En proceso': 'tgw', 'Listo': 'tga', 'Entregado': 'tgs', 'Abandonado': 'tgd' };
+  var eC = { 'Esperando presupuesto': '#8b8ba7', 'En proceso': '#d4a017', 'Listo': '#3b82f6', 'Entregado': '#22c55e', 'Abandonado': '#ef4444' };
+  if (el('recibioList')) {
+    var recibidos = Array.from(new Set(state.reparaciones.map(function(r) { return (r.tecnico || '').trim(); }).filter(Boolean)));
+    el('recibioList').innerHTML = recibidos.map(function(n) { return '<option value="' + n.replace(/"/g, '&quot;') + '">'; }).join('');
+  }
+  var fil = _filtrarReparaciones();
+  if (el('repRes')) {
+    var facturado = fil.reduce(function(s, r) { return s + (parseFloat(r.precioReparacion) || 0); }, 0);
+    el('repRes').textContent = fil.length + ' reparación' + (fil.length !== 1 ? 'es' : '') + (fil.length ? ' · ' + fm(facturado) : '');
+  }
+  if (filtroRep === 'activas') { renRepActivas(fil, eC); return; }
+  if (!fil.length) { el('tRep').innerHTML = '<div class="empty">Sin reparaciones</div>'; return; }
+  el('tRep').innerHTML = '<table><thead><tr><th>Fecha</th><th>Cliente</th><th>Equipo</th><th>Problema</th><th>Precio</th><th>Ganancia</th><th>Medio</th><th>Estado</th><th></th><th></th></tr></thead><tbody>' +
+    fil.map(function(r) {
+      return '<tr>' +
+        '<td class="mono" style="font-size:11px;color:var(--muted)">' + fd(r.fecha) + '</td>' +
+        '<td><div>' + r.cliente + '</div>' + (r.whatsapp ? '<div style="font-size:11px"><a href="' + waLink(r.whatsapp, r.cliente, r.equipo) + '" target="_blank" style="color:#25D366;text-decoration:none">💬 ' + r.whatsapp + '</a></div>' : '') + '</td>' +
+        '<td style="font-size:12px">' + r.equipo + '</td>' +
+        '<td style="font-size:12px;color:var(--muted)">' + r.problema + (r.notas ? '<div style="font-size:10px;color:var(--accent2);margin-top:2px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + String(r.notas).replace(/"/g,"'") + '">' + String(r.notas).replace(/</g,'&lt;') + '</div>' : '') + '</td>' +
+        '<td class="mono ts"><input type="number" class="esel" style="width:82px;font-size:13px" value="' + (parseFloat(r.precioReparacion) || 0) + '" onblur="editPrecioRep(\'' + r.id + '\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()" title="Precio de la reparación"></td>' +
+        '<td class="mono">' + fm((parseFloat(r.precioReparacion) || 0) - (parseFloat(r.costoRepuesto) || 0)) + '<div style="font-size:10px;color:var(--muted);margin-top:3px">costo: <input type="number" class="esel" style="width:72px;font-size:10px;padding:2px 5px" value="' + (parseFloat(r.costoRepuesto) || 0) + '" onblur="editCostoRep(\'' + r.id + '\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()" title="Costo técnico: mano de obra + insumos (interno)"></div></td>' +
+        '<td>' + (r.medio2
+          ? '<span class="tag tga" title="' + fm(r.montoMedio1) + ' ' + (r.medio1 || r.medio) + ' + ' + fm(r.montoMedio2) + ' ' + r.medio2 + '">' + (r.medio1 || r.medio) + ' + ' + r.medio2 + '</span>'
+          : r.medio
+            ? '<select class="esel" onchange="updMedioRep(\'' + r.id + '\',this.value)">' +
+              ['Efectivo','Transferencia','Débito','Crédito','Pago QR'].map(function(m) { return '<option' + (r.medio === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') +
+              '</select>'
+            : '<span class="tm" style="font-size:11px">— (al entregar)</span>') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn btn-sm" style="background:var(--surface2);color:var(--muted);padding:4px 8px" onclick="imprimirRep(\'' + r.id + '\')">🖨</button> <button class="btn btn-sm" style="background:var(--surface2);color:var(--muted);padding:4px 8px" onclick="addNota(\'' + r.id + '\')" title="Agregar nota">📝</button></td>' +
+        '<td><select class="esel" style="border-left:3px solid ' + (eC[r.estado] || '#888') + ';font-weight:600" onchange="updEstado(\'' + r.id + '\',this.value)">' +
+        ['Esperando presupuesto', 'En proceso', 'Listo', 'Entregado', 'Abandonado'].map(function(e) { return '<option' + (r.estado === e ? ' selected' : '') + '>' + e + '</option>'; }).join('') +
+        '</select></td>' +
+        '<td><button class="btn btn-sm" style="background:#1f0000;color:var(--danger);padding:4px 8px" onclick="borrarRep(\'' + r.id + '\')">✕</button></td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+// Vista "Activas": En proceso y Listo en columnas separadas (en vez de una sola lista
+// larga con scroll) — ver [[crm-reparaciones-activas]]. `fil` ya viene filtrado a
+// {En proceso, Listo} por _filtrarReparaciones().
+function renRepActivas(fil, eC) {
+  var espera = fil.filter(function(r) { return r.estado === 'Esperando presupuesto'; });
+  var proc = fil.filter(function(r) { return r.estado === 'En proceso'; });
+  var listo = fil.filter(function(r) { return r.estado === 'Listo'; });
+  renRepEspera(espera, eC);
+  renRepMini('tRepProc', proc, eC, false);
+  renRepMini('tRepListo', listo, eC, true);
+  if (el('repEsperaRes')) el('repEsperaRes').textContent = espera.length + (espera.length === 1 ? ' reparación' : ' reparaciones');
+  if (el('repProcRes')) el('repProcRes').textContent = proc.length + (proc.length === 1 ? ' reparación' : ' reparaciones');
+  if (el('repListoRes')) el('repListoRes').textContent = listo.length + (listo.length === 1 ? ' reparación' : ' reparaciones');
+}
+// Columna "Esperando presupuesto": casos sin precio confirmado (no se sabe modelo/costo al recibir
+// el equipo — ver [[crm-reparaciones-ia-agentica]]). A propósito NO muestra PVP ni costo técnico,
+// todavía no se conocen. Antigüedad por fecha de ingreso, igual que "En proceso".
+function renRepEspera(items, eC) {
+  var cont = el('tRepEspera'); if (!cont) return;
+  if (!items.length) { cont.innerHTML = '<div class="empty">Sin casos esperando presupuesto</div>'; return; }
+  cont.innerHTML = items.map(function(r) {
+    var dias = _diasDesde(r.fecha);
+    var diasCls = dias === null ? 'tm' : dias >= 4 ? 'td' : dias >= 2 ? 'tw' : 'tm';
+    var diasTxt = dias === null ? '' : ' · ' + (dias <= 0 ? 'hoy' : dias === 1 ? '1 día' : dias + ' días');
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="font-weight:600">' + r.cliente + '</div>' +
+      '<div style="font-size:12px;color:var(--muted)">' + r.equipo + '<span class="' + diasCls + '">' + diasTxt + '</span></div>' +
+      (r.problema ? '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + r.problema + '</div>' : '') +
+      (r.whatsapp ? '<a href="' + waLink(r.whatsapp, r.cliente, r.equipo) + '" target="_blank" style="color:#25D366;text-decoration:none;font-size:11px;display:inline-block;margin-top:4px">💬 ' + r.whatsapp + '</a>' : '') +
+      '<div class="flex ac jb" style="margin-top:8px;gap:8px">' +
+      '<button class="btn btn-p btn-sm" style="padding:5px 10px;font-size:12px" onclick="editarRep(\'' + r.id + '\')">Presupuestar</button>' +
+      '<span class="flex ac g8">' +
+      '<button class="btn btn-sm" style="background:var(--surface2);color:var(--muted);padding:4px 8px" onclick="addNota(\'' + r.id + '\')" title="Agregar nota">📝</button>' +
+      '<button class="btn btn-sm" style="background:#1f0000;color:var(--danger);padding:4px 8px" onclick="borrarRep(\'' + r.id + '\')" title="Borrar">✕</button></span>' +
+      '</div></div>';
+  }).join('');
+}
+// Antigüedad de una reparación en su etapa actual: días desde que ingresó (columna "En proceso")
+// o desde que quedó lista (columna "Listo", usa fechaListo — con fallback a fecha para registros
+// viejos de antes de este cambio, que no la tienen). Se resalta en amarillo/rojo si se estanca,
+// para que no se pierdan de vista en el embrollo cuando hay varias en simultáneo.
+function _diasDesde(fechaStr) {
+  if (!fechaStr) return null;
+  var d = new Date(fechaStr + 'T12:00:00');
+  var hoy = new Date(today() + 'T12:00:00');
+  return Math.round((hoy - d) / 86400000);
+}
+function renRepMini(contId, items, eC, conAvisado) {
+  var cont = el(contId); if (!cont) return;
+  if (!items.length) { cont.innerHTML = '<div class="empty">Sin reparaciones</div>'; return; }
+  cont.innerHTML = items.map(function(r) {
+    var avisadoChk = conAvisado ? '<label class="flex ac g8" style="cursor:pointer;white-space:nowrap" title="Marcar cuando avisaste al cliente que está listo">' +
+      '<input type="checkbox" style="width:auto" ' + (r.avisado ? 'checked' : '') + ' onchange="updAvisado(\'' + r.id + '\',this.checked)"> ' +
+      '<span style="font-size:11px;color:' + (r.avisado ? 'var(--success)' : 'var(--muted)') + '">' + (r.avisado ? '✓ Avisado' : 'Avisado') + '</span></label>' : '';
+    var dias = _diasDesde(conAvisado ? (r.fechaListo || r.fecha) : r.fecha);
+    var umbralW = conAvisado ? 2 : 4, umbralD = conAvisado ? 4 : 8;
+    var diasCls = dias === null ? 'tm' : dias >= umbralD ? 'td' : dias >= umbralW ? 'tw' : 'tm';
+    var diasTxt = dias === null ? '' : ' · ' + (dias <= 0 ? 'hoy' : dias === 1 ? '1 día' : dias + ' días');
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div class="flex ac jb" style="gap:8px">' +
+      '<div><div style="font-weight:600">' + r.cliente + '</div><div style="font-size:12px;color:var(--muted)">' + r.equipo + '<span class="' + diasCls + '">' + diasTxt + '</span></div>' +
+      (r.tecnico ? '<div style="font-size:11px;color:var(--muted)">recibió: ' + r.tecnico + '</div>' : '') + '</div>' +
+      '<div style="text-align:right">' +
+      '<div class="mono" style="font-weight:600">' + fm(parseFloat(r.precioReparacion) || 0) + '</div>' +
+      '<div style="font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap">costo téc.: <input type="number" class="esel" style="width:64px;font-size:10px;padding:1px 4px" value="' + (parseFloat(r.costoRepuesto) || 0) + '" onblur="editCostoRep(\'' + r.id + '\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()" title="Costo técnico: mano de obra + insumos (interno, no se imprime)"></div>' +
+      '<div style="font-size:11px;color:var(--success);margin-top:2px">gan.: ' + fm((parseFloat(r.precioReparacion) || 0) - (parseFloat(r.costoRepuesto) || 0)) + '</div>' +
+      (r.whatsapp ? '<a href="' + waLink(r.whatsapp, r.cliente, r.equipo) + '" target="_blank" style="color:#25D366;text-decoration:none;font-size:11px;display:inline-block;margin-top:2px">💬 ' + r.whatsapp + '</a>' : '') +
+      '</div></div>' +
+      '<div class="flex ac jb" style="margin-top:8px;gap:8px">' +
+      '<select class="esel" style="font-size:12px;border-left:3px solid ' + (eC[r.estado] || '#888') + '" onchange="updEstado(\'' + r.id + '\',this.value)">' +
+      ['Esperando presupuesto', 'En proceso', 'Listo', 'Entregado', 'Abandonado'].map(function(e) { return '<option' + (r.estado === e ? ' selected' : '') + '>' + e + '</option>'; }).join('') +
+      '</select>' +
+      '<span class="flex ac g8">' + avisadoChk +
+      '<button class="btn btn-sm" style="background:var(--surface2);color:var(--muted);padding:4px 8px" onclick="editarRep(\'' + r.id + '\')" title="Editar">✏️</button>' +
+      '<button class="btn btn-sm" style="background:var(--surface2);color:var(--muted);padding:4px 8px" onclick="imprimirRep(\'' + r.id + '\')" title="Imprimir orden">🖨</button>' +
+      '<button class="btn btn-sm" style="background:var(--surface2);color:var(--muted);padding:4px 8px" onclick="addNota(\'' + r.id + '\')" title="Agregar nota">📝</button>' +
+      '<button class="btn btn-sm" style="background:#1f0000;color:var(--danger);padding:4px 8px" onclick="borrarRep(\'' + r.id + '\')" title="Borrar">✕</button></span>' +
+      '</div></div>';
+  }).join('');
+}
+function updAvisado(id, val) {
+  var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  if (!r) return;
+  r.avisado = val;
+  apiPost({ accion: 'actualizar', hoja: 'reparaciones', id: id, campo: 'avisado', valor: val }, function(err) {
+    if (err) return alert('Error.');
+    renRep();
+  });
+}
+function borrarRep(id) {
+  if (!confirm('¿Borrar esta reparación?')) return;
+  apiPost({ accion: 'borrar', hoja: 'reparaciones', id: id }, function(err) {
+    if (err) return alert('Error al borrar.');
+    state.reparaciones = state.reparaciones.filter(function(r) { return r.id !== id; });
+    renRep(); renDash();
+  });
+}
+function editCostoRep(id, valor) {
+  var n = parseFloat(valor) || 0;
+  var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  if (!r || r.costoRepuesto === n) return;
+  r.costoRepuesto = n;
+  apiPost({ accion: 'actualizar', hoja: 'reparaciones', id: id, campo: 'costoRepuesto', valor: n }, function(err) {
+    if (!err) { renRep(); renDash(); }
+  });
+}
+function editPrecioRep(id, valor) {
+  var n = parseFloat(valor) || 0;
+  var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  if (!r || r.precioReparacion === n) return;
+  r.precioReparacion = n;
+  apiPost({ accion: 'actualizar', hoja: 'reparaciones', id: id, campo: 'precioReparacion', valor: n }, function(err) {
+    if (!err) { renRep(); renDash(); }
+  });
+}
+function addNota(id) {
+  var texto = prompt('Nueva nota:');
+  if (!texto || !texto.trim()) return;
+  var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  if (!r) return;
+  var hoyStr = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  var nueva = '[' + hoyStr + '] ' + texto.trim();
+  r.notas = r.notas ? nueva + ' · ' + r.notas : nueva;
+  apiPost({ accion: 'actualizar', hoja: 'reparaciones', id: id, campo: 'notas', valor: r.notas }, function(err) {
+    if (!err) renRep();
+  });
+}
+
+// STOCK
+var stockSortDir = 0;
+function toggleSortStock() {
+  stockSortDir = stockSortDir <= 0 ? 1 : -1;
+  if (el('btnSortStock')) el('btnSortStock').textContent = stockSortDir === 1 ? '↑ Cantidad' : '↓ Cantidad';
+  renStock();
+}
+function addStock() {
+  var item = { id: gid(), nombre: (el('sN').value || '').toUpperCase().trim(), cantidad: parseInt(el('sC').value) || 0, costo: parseFloat(el('sCo').value) || 0, precioVenta: parseFloat(el('sPV').value) || 0, stockMinimo: parseInt(el('sSm').value) || 3 };
+  if (!item.nombre || !item.cantidad) return showMsg('msgS', 'd', 'Completá nombre y cantidad.');
+  apiPost({ accion: 'agregar', hoja: 'stock', item: item }, function(err) {
+    if (err) return showMsg('msgS', 'd', 'Error al guardar.');
+    state.stock.push(item);
+    renStock(); renSelProd();
+    el('sN').value = ''; el('sC').value = ''; el('sCo').value = ''; el('sPV').value = ''; el('sSm').value = '3';
+    el('fStock').style.display = 'none';
+    showMsg('msgS', 's', '✓ Producto agregado.');
+  });
+}
+function renStock() {
+  var buscar = (el('bStock').value || '').toLowerCase();
+  var fil = state.stock.filter(function(s) { return s.nombre.toLowerCase().indexOf(buscar) >= 0; });
+  var totC = state.stock.reduce(function(s, i) { return s + (parseFloat(i.costo) || 0) * (parseInt(i.cantidad) || 0); }, 0);
+  var sin = state.stock.filter(function(s) { return (parseInt(s.cantidad) || 0) === 0; }).length;
+  var bajo = state.stock.filter(function(s) { var c = parseInt(s.cantidad) || 0; var m = parseInt(s.stockMinimo) || 3; return c > 0 && c <= m; }).length;
+  el('sRes').innerHTML = state.stock.length + ' productos · Valor costo: <span class="mono tw">' + fm(totC) + '</span>' +
+    (sin ? ' · <span class="td">' + sin + ' sin stock</span>' : '') +
+    (bajo ? ' · <span class="tw">' + bajo + ' bajo mínimo</span>' : '');
+  // Lista de reposición: productos sin stock o bajo el mínimo (qué comprar)
+  renReposicion();
+  if (!fil.length) { el('tStock').innerHTML = '<div class="empty">Sin resultados</div>'; return; }
+  var filSorted = stockSortDir !== 0 ? fil.slice().sort(function(a, b) { return stockSortDir * ((parseInt(a.cantidad)||0) - (parseInt(b.cantidad)||0)); }) : fil;
+  el('tStock').innerHTML = '<table><thead><tr><th>Producto</th><th>Stock</th><th>Mín.</th><th>Costo unit.</th><th>Precio venta</th><th>Valor total</th><th>Estado</th></tr></thead><tbody>' +
+    filSorted.map(function(s) {
+      var c = parseInt(s.cantidad) || 0;
+      var mn = parseInt(s.stockMinimo) || 3;
+      var cls = c === 0 ? 'tgd' : c <= mn ? 'tgw' : 'tgs';
+      var lbl = c === 0 ? 'Sin stock' : c <= mn ? 'Bajo' : 'OK';
+      var nom = s.nombre.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return '<tr>' +
+        '<td>' + s.nombre + '</td>' +
+        '<td><div class="flex ac g8"><input type="number" class="esel" style="width:58px" value="' + c + '" onblur="updateStockCant(\'' + s.id + '\',this.value,\'' + nom + '\')" onkeydown="if(event.key===\'Enter\')this.blur()" title="Stock actual (reemplaza el valor)"><button class="btn btn-sm" style="padding:2px 9px;background:var(--surface2);color:var(--success);font-weight:700" onclick="sumarStock(\'' + s.id + '\',\'' + nom + '\')" title="Sumar unidades que llegaron">+</button></div></td>' +
+        '<td><input type="number" class="esel" style="width:50px" value="' + mn + '" onblur="updateStockMin(\'' + s.id + '\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()" title="Stock mínimo de alerta"></td>' +
+        '<td class="mono">' + fm(s.costo) + '</td>' +
+        '<td class="mono">' + ((parseFloat(s.precioVenta) || 0) > 0 ? fm(s.precioVenta) : '—') + '</td>' +
+        '<td class="mono">' + fm((parseFloat(s.costo) || 0) * c) + '</td>' +
+        '<td><span class="tag ' + cls + '">' + lbl + '</span></td>' +
+        '</tr>';
+    }).join('') + '</tbody></table>';
+}
+function renReposicion() {
+  var cont = el('reposicion');
+  if (!cont) return;
+  var rep = state.stock.filter(function(s) {
+    var c = parseInt(s.cantidad) || 0;
+    var m = parseInt(s.stockMinimo) || 3;
+    return c <= m;
+  }).sort(function(a, b) { return (parseInt(a.cantidad) || 0) - (parseInt(b.cantidad) || 0); });
+  var btn = el('btnRepo');
+  if (!rep.length) { cont.style.display = 'none'; cont.innerHTML = ''; if (btn) btn.style.display = 'none'; return; }
+  if (btn) { btn.style.display = ''; btn.textContent = '🛒 Reposición (' + rep.length + ')'; }
+  // Velocidad de venta real de los últimos 30 días: sugiere en base a lo que efectivamente
+  // se vende (cubrir DIAS_COBERTURA de demanda esperada), no una fórmula fija arbitraria.
+  var DIAS_COBERTURA = 14;
+  var hace30 = new Date(); hace30.setDate(hace30.getDate() - 30);
+  var fechaCorte = localDateStr(hace30);
+  var ventas30 = {};
+  state.ventas.forEach(function(v) {
+    if (v.fecha >= fechaCorte) ventas30[v.nombre] = (ventas30[v.nombre] || 0) + (parseInt(v.cantidad) || 0);
+  });
+  cont.innerHTML = '<h3 style="margin-bottom:4px">🛒 Reposición sugerida — ' + rep.length + ' producto' + (rep.length !== 1 ? 's' : '') + ' para comprar</h3>' +
+    '<div class="tm" style="font-size:11px;margin-bottom:12px">Basada en lo vendido los últimos 30 días, para cubrir ' + DIAS_COBERTURA + ' días de demanda. Sin historial de venta, usa el mínimo como referencia.</div>' +
+    '<table><thead><tr><th>Producto</th><th>Stock</th><th>Mín.</th><th>Vendido/30d</th><th>Comprar (sug.)</th><th>Estado</th></tr></thead><tbody>' +
+    rep.map(function(s) {
+      var c = parseInt(s.cantidad) || 0;
+      var m = parseInt(s.stockMinimo) || 3;
+      var vendido = ventas30[s.nombre] || 0;
+      var objetivo = Math.ceil((vendido / 30) * DIAS_COBERTURA);
+      var sug = (objetivo - c) > 0 ? (objetivo - c) : Math.max(m - c, 1);
+      var cls = c === 0 ? 'tgd' : 'tgw';
+      var lbl = c === 0 ? 'Sin stock' : 'Bajo';
+      return '<tr><td>' + s.nombre + '</td><td class="mono">' + c + '</td><td class="mono tm">' + m + '</td>' +
+        '<td class="mono tm">' + (vendido || '—') + '</td>' +
+        '<td class="mono ts">' + sug + '</td><td><span class="tag ' + cls + '">' + lbl + '</span></td></tr>';
+    }).join('') + '</tbody></table>';
+}
+function updateStockMin(id, valor) {
+  var n = parseInt(valor) || 0;
+  var s = state.stock.filter(function(x) { return x.id === id; })[0];
+  if (!s) return;
+  s.stockMinimo = n;
+  apiPost({ accion: 'actualizar', hoja: 'stock', id: id, campo: 'stockMinimo', valor: n }, function() { renStock(); });
+}
+function updateStockCant(id, valor, nombre) {
+  var n = parseInt(valor) || 0;
+  var s = state.stock.filter(function(x) { return x.id === id; })[0];
+  if (!s) return;
+  s.cantidad = n;
+  apiPost({ accion: 'actualizarStockPorNombre', nombre: nombre || s.nombre, valor: n }, function() { renStock(); renDash(); });
+}
+function sumarStock(id, nombre) {
+  var s = state.stock.filter(function(x) { return x.id === id; })[0];
+  if (!s) return;
+  var add = prompt('Cuantas unidades llegaron de "' + s.nombre + '"? (stock actual: ' + (parseInt(s.cantidad) || 0) + ')');
+  if (add === null) return;
+  var n = parseInt(add);
+  if (isNaN(n) || n === 0) return;
+  var total = (parseInt(s.cantidad) || 0) + n;
+  if (total < 0) total = 0;
+  s.cantidad = total;
+  apiPost({ accion: 'actualizarStockPorNombre', nombre: nombre || s.nombre, valor: total }, function() { renStock(); renDash(); });
+}
+function impExcel(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      var wb = XLSX.read(evt.target.result, { type: 'binary' });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      // Buscar fila de encabezados
+      var hIdx = -1;
+      for (var i = 0; i < raw.length; i++) {
+        if (Array.isArray(raw[i]) && raw[i].some(function(c) { return String(c || '').toLowerCase() === 'articulo'; })) { hIdx = i; break; }
+      }
+      if (hIdx === -1) { showMsg('msgS', 'd', 'No se encontró columna "Articulo" en el Excel.'); return; }
+
+      var heads = (raw[hIdx] || []).map(function(h) { return String(h || '').trim().toLowerCase(); });
+      var iN = heads.indexOf('articulo');
+      var iS = heads.indexOf('stock');
+      var iC = heads.indexOf('neto');   // columna de costo
+      var iA = heads.indexOf('activo');
+      var iSv = heads.indexOf('servicio');
+
+      if (iN === -1 || iS === -1 || iC === -1) {
+        showMsg('msgS', 'd', 'No se encontraron columnas Articulo / Stock / Neto.');
+        return;
+      }
+
+      impPrev = raw.slice(hIdx + 1)
+        .filter(function(r) {
+          var activo = iA === -1 || String(r[iA] || '').toUpperCase() === 'SI';
+          var esServicio = iSv !== -1 && String(r[iSv] || '').toUpperCase() === 'SI';
+          var tieneStock = (parseFloat(r[iS]) || 0) > 0;
+          return activo && !esServicio && tieneStock && r[iN];
+        })
+        .map(function(r) {
+          return { id: gid(), nombre: String(r[iN]).toUpperCase().trim(), cantidad: Math.round(parseFloat(r[iS]) || 0), costo: Math.round(parseFloat(r[iC]) || 0) };
+        });
+
+      var nuevos = impPrev.filter(function(i) {
+        return !state.stock.filter(function(s) { return s.nombre === i.nombre; }).length;
+      }).length;
+
+      el('impInfo').textContent = impPrev.length + ' productos · ' + nuevos + ' nuevos · ' + (impPrev.length - nuevos) + ' a actualizar (suma stock)';
+      el('impBody').innerHTML = impPrev.slice(0, 60).map(function(i) {
+        return '<tr><td style="font-size:12px">' + i.nombre + '</td><td class="mono">' + i.cantidad + '</td><td class="mono">' + fm(i.costo) + '</td></tr>';
+      }).join('');
+      if (impPrev.length > 60) el('impBody').innerHTML += '<tr><td colspan="3" class="tm" style="font-size:12px;text-align:center">...y ' + (impPrev.length - 60) + ' más</td></tr>';
+      el('modImp').style.display = 'flex';
+    } catch (err) { showMsg('msgS', 'd', 'Error leyendo el Excel.'); }
+  };
+  reader.readAsBinaryString(file); e.target.value = '';
+}
+function impPrecios(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      var wb = XLSX.read(evt.target.result, { type: 'binary' });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      var hIdx = -1;
+      for (var i = 0; i < raw.length; i++) {
+        if (Array.isArray(raw[i]) && raw[i].some(function(c) { return String(c || '').toLowerCase().trim() === 'nombre'; })) { hIdx = i; break; }
+      }
+      if (hIdx === -1) { showMsg('msgS', 'd', 'No se encontró columna "nombre" en el Excel.'); return; }
+
+      var heads = (raw[hIdx] || []).map(function(h) { return String(h || '').trim().toLowerCase(); });
+      var iN = heads.indexOf('nombre');
+      var iPV = heads.indexOf('precioventa');
+      if (iN === -1 || iPV === -1) { showMsg('msgS', 'd', 'Se necesitan columnas "nombre" y "precioVenta".'); return; }
+
+      var items = raw.slice(hIdx + 1)
+        .filter(function(r) { return r[iN] && (parseFloat(r[iPV]) || 0) > 0; })
+        .map(function(r) { return { nombre: String(r[iN]).toUpperCase().trim(), precioVenta: Math.round(parseFloat(r[iPV]) || 0) }; });
+
+      if (!items.length) { showMsg('msgS', 'd', 'No hay filas válidas para importar.'); return; }
+      if (!confirm('¿Actualizar el precio de venta público de ' + items.length + ' productos existentes en el Stock?')) return;
+
+      apiPost({ accion: 'importarPrecios', items: items }, function(err, d) {
+        if (err) return showMsg('msgS', 'd', 'Error al importar precios.');
+        items.forEach(function(item) {
+          var s = state.stock.filter(function(x) { return x.nombre === item.nombre; })[0];
+          if (s) s.precioVenta = item.precioVenta;
+        });
+        renStock(); renSelProd();
+        showMsg('msgS', 's', '✓ Precio de venta actualizado en ' + (d && d.actualizados != null ? d.actualizados : items.length) + ' productos.');
+      });
+    } catch (err) { showMsg('msgS', 'd', 'Error leyendo el Excel.'); }
+  };
+  reader.readAsBinaryString(file); e.target.value = '';
+}
+
+// IMPRIMIR REPARACIÓN
+function imprimirRep(id) {
+  var r = state.reparaciones.filter(function(x) { return x.id === id; })[0];
+  if (!r) return;
+  var orden = r.id.toUpperCase().slice(0, 8);
+  var fecha = fd(r.fecha);
+  var copia = `
+<div class="copia">
+  <div class="header">
+    <div>
+      <div class="logo">TECNO<span>PUERTO</span></div>
+      <div class="dir">Padre Dutto 475</div>
+    </div>
+    <div class="orden-box">
+      <div>Orden Nro:</div>
+      <div class="orden-num">${orden}</div>
+      <div>Fecha: ${fecha}</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Cliente</div>
+    <div class="row">
+      <div class="field"><label>Nombre</label><span>${r.cliente}</span></div>
+      <div class="field"><label>WhatsApp</label><span>${r.whatsapp || '—'}</span></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Equipo</div>
+    <div class="row">
+      <div class="field"><label>Modelo</label><span>${r.equipo}</span></div>
+      <div class="field"><label>Recibió</label><span>${r.tecnico || '—'}</span></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Problema declarado</label><span>${r.problema}</span></div>
+    </div>
+    ${r.notas ? `<div class="row"><div class="field"><label>Notas</label><span>${r.notas}</span></div></div>` : ''}
+  </div>
+  <div class="total-box">
+    <div class="label">Total reparación</div>
+    <div class="monto">${(parseFloat(r.precioReparacion) || 0) > 0 ? fm(r.precioReparacion) : 'A presupuestar'}</div>
+  </div>
+  <div class="firma">
+    <div class="firma-box"><div class="firma-line">Firma del cliente</div></div>
+    <div class="firma-box"><div class="firma-line">Firma Tecnopuerto</div></div>
+  </div>
+  <div class="disclaimer">
+    <strong>Condiciones generales:</strong> Los equipos no retirados dentro de los 90 días a partir de la fecha de ingreso serán considerados abandonados, pudiendo la empresa disponer de los mismos según Arts. 2525, 2526, 2529, 3939 y 3940 del Código Civil. El presupuesto tiene validez de 30 días. Tecnopuerto no se responsabiliza por daños preexistentes no declarados al momento del ingreso.
+  </div>
+</div>`;
+  var win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Orden ${orden}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:13px;margin:0;padding:16px;color:#111}
+  .copia{margin-bottom:10px}
+  .separador{text-align:center;font-size:10px;color:#999;margin:10px 0;padding-top:8px;border-top:1px dashed #bbb}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px}
+  .logo{font-size:20px;font-weight:900;letter-spacing:-1px}
+  .logo span{font-weight:300}
+  .dir{font-size:11px;color:#444;margin-top:4px}
+  .orden-box{text-align:right;font-size:11px}
+  .orden-num{font-size:18px;font-weight:700}
+  .section{margin-bottom:14px}
+  .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#666;margin-bottom:6px;border-bottom:1px solid #ddd;padding-bottom:3px}
+  .row{display:flex;gap:24px;margin-bottom:6px}
+  .field{flex:1}
+  .field label{font-size:10px;color:#666;display:block}
+  .field span{font-size:13px;font-weight:600}
+  .total-box{border:2px solid #111;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin:16px 0}
+  .total-box .label{font-size:11px;font-weight:700;text-transform:uppercase}
+  .total-box .monto{font-size:22px;font-weight:900}
+  .firma{margin-top:24px;display:flex;justify-content:space-between}
+  .firma-box{text-align:center;width:180px}
+  .firma-line{border-top:1px solid #111;padding-top:6px;font-size:10px;color:#444}
+  .disclaimer{margin-top:16px;font-size:9px;color:#666;line-height:1.5;border-top:1px solid #ddd;padding-top:10px}
+  @media print{body{padding:0}}
+</style></head><body>
+${copia}
+<div class="separador">✂ ─ ─ ─ ─ ─ ─ ─ ─ ─ COPIA CLIENTE ─ ─ ─ ─ ─ COPIA LOCAL ─ ─ ─ ─ ─ ─ ─ ─ ─</div>
+${copia}
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+// ESTADÍSTICAS
+function renStats() {
+  var desde = new Date(el('dDesde').value + 'T00:00:00');
+  var hasta = new Date(el('dHasta').value + 'T23:59:59');
+  function inR(f) { var d = new Date(f + 'T12:00:00'); return d >= desde && d <= hasta; }
+  // Período anterior de igual duración, inmediatamente antes del período elegido — para
+  // mostrar variación ↑/↓ en las tarjetas KPI de Reparaciones, Ganancia neta y Ticket promedio.
+  var prevHasta = new Date(desde.getTime() - 1000);
+  var prevDesde = new Date(prevHasta.getTime() - (hasta.getTime() - desde.getTime()));
+  function inPrev(f) { var d = new Date(f + 'T12:00:00'); return d >= prevDesde && d <= prevHasta; }
+  var rFp = state.reparaciones.filter(function(r) { return inPrev(r.fecha); });
+  var vFp = state.ventas.filter(function(v) { return inPrev(v.fecha); });
+  var rEntp = state.reparaciones.filter(function(r) { return r.estado === 'Entregado' && inPrev(r.fechaEntrega || r.fecha); });
+  var tVp = vFp.reduce(function(s, v) { return s + (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0); }, 0);
+  var cVp = vFp.reduce(function(s, v) { return s + (parseFloat(v.costoUnit) || 0) * (parseInt(v.cantidad) || 0); }, 0);
+  var tRp = rEntp.reduce(function(s, r) { return s + (parseFloat(r.precioReparacion) || 0); }, 0);
+  var cRp = rEntp.reduce(function(s, r) { return s + (parseFloat(r.costoRepuesto) || 0); }, 0);
+  var opsP = vFp.length + rEntp.length;
+  var ticketP = opsP > 0 ? (tVp + tRp) / opsP : 0;
+  var gastosFp = (state.gastos || []).filter(function(g) { return inPrev(g.fecha) && g.categoria !== 'Mercadería/Stock'; });
+  var totGastosP = gastosFp.reduce(function(s, g) { return s + (parseFloat(g.monto) || 0); }, 0);
+  var gananciaNetaP = ((tVp - cVp) + (tRp - cRp)) - totGastosP;
+  var vF = state.ventas.filter(function(v) { return inR(v.fecha); });
+  var rF = state.reparaciones.filter(function(r) { return inR(r.fecha); });
+  var tV = vF.reduce(function(s, v) { return s + (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0); }, 0);
+  var cV = vF.reduce(function(s, v) { return s + (parseFloat(v.costoUnit) || 0) * (parseInt(v.cantidad) || 0); }, 0);
+  var gV = tV - cV, mV = cV > 0 ? (gV / cV * 100) : 0;
+  var rEnt = state.reparaciones.filter(function(r) { return r.estado === 'Entregado' && inR(r.fechaEntrega || r.fecha); });
+  var tR = rEnt.reduce(function(s, r) { return s + (parseFloat(r.precioReparacion) || 0); }, 0);
+  var cR = rEnt.reduce(function(s, r) { return s + (parseFloat(r.costoRepuesto) || 0); }, 0);
+  var gR = tR - cR;
+  el('stT').textContent = fm(tV + tR); el('stG').textContent = fm(gV + gR);
+  el('stMs').textContent = 'Incl. reparaciones · margen accesorios: ' + mV.toFixed(0) + '%';
+  el('stR').textContent = rF.length; el('stRs').textContent = fm(tR) + ' · ' + rEnt.length + ' entregadas';
+  renderDelta('stRDelta', rF.length, rFp.length);
+  el('stGR').textContent = fm(gR); el('stCR').textContent = 'Pagado a técnicos: ' + fm(cR);
+  el('stV').textContent = fm(tV); el('stRv').textContent = fm(tR); el('stTot').textContent = fm(tV + tR);
+  var medios = {};
+  vF.forEach(function(v) { medioPartes(v).forEach(function(p) { medios[p.medio] = (medios[p.medio] || 0) + p.monto; }); });
+  rEnt.forEach(function(r) { repMedioPartes(r).forEach(function(p) { medios[p.medio] = (medios[p.medio] || 0) + p.monto; }); });
+  var totMedios = tV + tR;
+  el('tMedios').innerHTML = Object.keys(medios).length === 0 ? '<div class="empty">Sin datos</div>' :
+    '<table><thead><tr><th>Medio</th><th>Total</th><th>%</th></tr></thead><tbody>' +
+    Object.entries(medios).sort(function(a, b) { return b[1] - a[1]; })
+      .map(function(x) { return '<tr><td>' + x[0] + '</td><td class="mono ts">' + fm(x[1]) + '</td><td class="mono">' + (totMedios > 0 ? (x[1] / totMedios * 100).toFixed(0) : 0) + '%</td></tr>'; }).join('') +
+    '</tbody></table>';
+  var dias = {};
+  for (var i = 13; i >= 0; i--) { var d = new Date(); d.setDate(d.getDate() - i); var k = localDateStr(d); dias[k] = { v: 0, r: 0, label: d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' }), labelFull: d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }) }; }
+  state.ventas.forEach(function(v) { if (dias[v.fecha]) dias[v.fecha].v += (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0); });
+  state.reparaciones.forEach(function(r) { var fd = r.fechaEntrega || r.fecha; if (r.estado === 'Entregado' && dias[fd]) dias[fd].r += (parseFloat(r.precioReparacion) || 0); });
+  // Encontrar el día pico para resaltarlo (motiva ver el récord de un vistazo)
+  var diasArr = Object.entries(dias);
+  var diasConVentas = diasArr.filter(function(x) { return (x[1].v + x[1].r) > 0; });
+  var promedio = diasConVentas.length ? diasConVentas.reduce(function(s, x) { return s + x[1].v + x[1].r; }, 0) / diasConVentas.length : 0;
+  var mejorKey = null, mejorTotal = 0;
+  diasArr.forEach(function(x) { var t = x[1].v + x[1].r; if (t > mejorTotal) { mejorTotal = t; mejorKey = x[0]; } });
+  if (el('mejorDiaBadge')) {
+    if (mejorKey && mejorTotal > 0) {
+      var vsProm = promedio > 0 ? Math.round((mejorTotal / promedio - 1) * 100) : 0;
+      el('mejorDiaBadge').innerHTML = '🏆 Mejor día: <span style="color:var(--text);font-weight:600">' + dias[mejorKey].labelFull + '</span> — <span class="mono ts">' + fm(mejorTotal) + '</span>' + (vsProm > 0 ? ' <span class="tm">(+' + vsProm + '% vs. el promedio)</span>' : '');
+    } else {
+      el('mejorDiaBadge').innerHTML = '';
+    }
+  }
+  var maxV = Math.max.apply(null, diasArr.map(function(x) { return x[1].v + x[1].r; }).concat([1]));
+  el('barC').innerHTML = diasArr.map(function(x) {
+    var k = x[0], d = x[1], total = d.v + d.r;
+    var esMejor = k === mejorKey && total > 0;
+    var hV = Math.max(d.v / maxV * 100, 0), hR = Math.max(d.r / maxV * 100, 0);
+    return '<div class="bcol" style="cursor:pointer" onclick="verMovimientoDia(\'' + k + '\')" title="Ver movimiento del ' + d.labelFull + '">' +
+      (esMejor ? '<div style="font-size:11px;line-height:1">🏆</div>' : '') +
+      (total > 0 ? '<div class="bval" style="' + (esMejor ? 'color:var(--warning);font-weight:700' : '') + '">' + fm(total).replace('$', '') + '</div>' : '') +
+      '<div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:2px' + (esMejor ? ';filter:drop-shadow(0 0 4px var(--warning))' : '') + '">' +
+      (d.r > 0 ? '<div style="width:100%;height:' + hR + '%;background:var(--success);border-radius:3px 3px 0 0;min-height:3px"></div>' : '') +
+      (d.v > 0 ? '<div style="width:100%;height:' + hV + '%;background:' + (esMejor ? 'var(--warning)' : 'var(--accent)') + ';border-radius:' + (d.r > 0 ? '0' : '3px 3px 0 0') + ';min-height:3px"></div>' : '') +
+      (total === 0 ? '<div style="width:100%;height:3px;background:var(--border);border-radius:3px"></div>' : '') +
+      '</div><div class="blabel" style="' + (esMejor ? 'color:var(--warning);font-weight:700' : '') + '">' + d.label + '</div></div>';
+  }).join('');
+
+  // Ticket promedio y operaciones del período
+  var ops = vF.length + rEnt.length;
+  var facturado = tV + tR;
+  if (el('stTicket')) el('stTicket').textContent = ops > 0 ? fm(facturado / ops) : '—';
+  if (el('stTicketSub')) el('stTicketSub').textContent = ops > 0 ? fm(facturado) + ' en ' + ops + ' oper.' : 'Sin operaciones';
+  if (el('stOps')) el('stOps').textContent = ops;
+  renderDelta('stTicketDelta', ops > 0 ? facturado / ops : 0, ticketP);
+
+  // Ganancia NETA del período = ganancia bruta − gastos operativos (SIN contar mercadería,
+  // porque el costo de la mercadería ya está descontado en cada venta vía costoUnit — contarla
+  // de nuevo acá sería descontarla dos veces). Se muestra aparte solo a modo informativo.
+  var gastosMerc = (state.gastos || []).filter(function(g) { return inR(g.fecha) && g.categoria === 'Mercadería/Stock'; });
+  var totMerc = gastosMerc.reduce(function(s, g) { return s + (parseFloat(g.monto) || 0); }, 0);
+  var gastosF = (state.gastos || []).filter(function(g) { return inR(g.fecha) && g.categoria !== 'Mercadería/Stock'; });
+  var totGastos = gastosF.reduce(function(s, g) { return s + (parseFloat(g.monto) || 0); }, 0);
+  var gananciaNeta = (gV + gR) - totGastos;
+  if (el('stGastos')) el('stGastos').textContent = fm(totGastos);
+  if (el('stGastosSub')) el('stGastosSub').textContent = totMerc > 0 ? 'Compras de mercadería (aparte, ya en costoUnit): ' + fm(totMerc) : 'No incluye compras de mercadería';
+  if (el('stNeta')) {
+    el('stNeta').textContent = fm(gananciaNeta);
+    el('stNeta').className = 'big-num ' + (gananciaNeta >= 0 ? 'ts' : 'tw');
+  }
+  renderDelta('stNetaDelta', gananciaNeta, gananciaNetaP);
+
+  // Evolución mensual — últimos 12 meses (independiente del filtro de fechas)
+  renStatsMensual();
+
+  // Stock sin rotación: con stock y sin ventas en los últimos ROT_DIAS días.
+  // Para cada producto se calcula además la fecha de la última venta real (no solo
+  // si vendió o no dentro de la ventana), para poder mostrar días exactos + semáforo.
+  var ROT_DIAS = 60;
+  var corte = new Date(); corte.setDate(corte.getDate() - ROT_DIAS);
+  var hoyDS = new Date();
+  var ultimaVenta = {};
+  state.ventas.forEach(function(v) {
+    var k = String(v.nombre).toUpperCase().trim();
+    var f = new Date(v.fecha + 'T12:00:00');
+    if (!ultimaVenta[k] || f > ultimaVenta[k]) ultimaVenta[k] = f;
+  });
+  var dead = state.stock.filter(function(s) {
+    var k = String(s.nombre).toUpperCase().trim();
+    return (parseInt(s.cantidad) || 0) > 0 && (!ultimaVenta[k] || ultimaVenta[k] < corte);
+  }).map(function(s) {
+    var k = String(s.nombre).toUpperCase().trim();
+    var dias = ultimaVenta[k] ? Math.round((hoyDS - ultimaVenta[k]) / 86400000) : null;
+    return { s: s, dias: dias };
+  }).sort(function(a, b) { return ((parseFloat(b.s.costo) || 0) * (parseInt(b.s.cantidad) || 0)) - ((parseFloat(a.s.costo) || 0) * (parseInt(a.s.cantidad) || 0)); });
+  if (el('tDeadStock')) {
+    el('tDeadStock').innerHTML = !dead.length ? '<div class="empty">Todo el stock con stock tuvo ventas recientes 👍</div>' :
+      '<table><thead><tr><th>Producto</th><th>Stock</th><th>Días sin venta</th><th>Estado</th><th>Costo unit.</th><th>Capital inmovilizado</th></tr></thead><tbody>' +
+      dead.map(function(x) {
+        var s = x.s, c = parseInt(s.cantidad) || 0, dias = x.dias;
+        var diasLabel = dias === null ? 'Nunca vendido' : dias + ' días';
+        var estado = (dias === null || dias >= 90) ? { tag: 'tgd', label: 'Crítico' } :
+                     (dias >= ROT_DIAS) ? { tag: 'tgw', label: 'Atención' } : { tag: 'tgs', label: 'OK' };
+        return '<tr><td>' + s.nombre + '</td><td class="mono">' + c + '</td><td class="mono">' + diasLabel + '</td>' +
+          '<td><span class="tag ' + estado.tag + '">' + estado.label + '</span></td>' +
+          '<td class="mono">' + fm(s.costo) + '</td><td class="mono tw">' + fm((parseFloat(s.costo) || 0) * c) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  renKpiSparklines();
+}
+
+// Detalle de movimiento de un día puntual — se abre al tocar una columna del gráfico
+// "Facturación diaria" en Estadísticas (ventas por producto + reparaciones entregadas ese día).
+function verMovimientoDia(fecha) {
+  if (!el('movDiaDetalle')) return;
+  var vDia = state.ventas.filter(function(v) { return v.fecha === fecha; });
+  var rDia = state.reparaciones.filter(function(r) { return (r.fechaEntrega || r.fecha) === fecha && r.estado === 'Entregado'; });
+  var totDia = vDia.reduce(function(s, v) { return s + (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0); }, 0) +
+    rDia.reduce(function(s, r) { return s + (parseFloat(r.precioReparacion) || 0); }, 0);
+  var filas = vDia.map(function(v) {
+    return '<tr><td>' + v.nombre + '</td><td class="mono">' + v.cantidad + '</td><td>' + (v.medio || '—') + '</td><td class="mono ts">' + fm((parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0)) + '</td></tr>';
+  }).concat(rDia.map(function(r) {
+    return '<tr><td>⚙ ' + r.equipo + ' (' + r.cliente + ')</td><td class="mono">1</td><td>' + _medioLabelRep(r) + '</td><td class="mono ts">' + fm(r.precioReparacion) + '</td></tr>';
+  }));
+  el('movDiaDetalle').innerHTML = '<div class="card card-sm" style="margin-top:10px;background:var(--surface)">' +
+    '<div class="flex ac jb" style="margin-bottom:10px"><div style="font-weight:700;font-size:13px">' + fd(fecha) + ' · ' + fm(totDia) + '</div>' +
+    '<a href="#" onclick="el(\'movDiaDetalle\').innerHTML=\'\';return false" class="tm" style="font-size:12px">✕ cerrar</a></div>' +
+    (filas.length ? '<table><thead><tr><th>Producto / equipo</th><th>Uds.</th><th>Medio</th><th>Monto</th></tr></thead><tbody>' + filas.join('') + '</tbody></table>' : '<div class="empty">Sin movimiento ese día</div>') +
+    '</div>';
+}
+
+// Sparklines de tendencia (últimos 12 meses, independiente del filtro de fechas) para
+// las tarjetas KPI de Ticket promedio, Ganancia neta y Reparaciones — ver [[crm-estadisticas-rediseno]]
+function renKpiSparklines() {
+  var meses = {};
+  var hoy = new Date();
+  for (var i = 11; i >= 0; i--) {
+    var dM = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    var k = dM.getFullYear() + '-' + ('0' + (dM.getMonth() + 1)).slice(-2);
+    meses[k] = { fact: 0, bruta: 0, gastos: 0, ops: 0, repEnt: 0 };
+  }
+  state.ventas.forEach(function(v) {
+    var k = String(v.fecha || '').slice(0, 7);
+    if (!meses[k]) return;
+    var t = (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0);
+    var c = (parseFloat(v.costoUnit) || 0) * (parseInt(v.cantidad) || 0);
+    meses[k].fact += t; meses[k].bruta += (t - c); meses[k].ops += 1;
+  });
+  state.reparaciones.forEach(function(r) {
+    if (r.estado !== 'Entregado') return;
+    var k = String(r.fechaEntrega || r.fecha || '').slice(0, 7);
+    if (!meses[k]) return;
+    var t = parseFloat(r.precioReparacion) || 0, c = parseFloat(r.costoRepuesto) || 0;
+    meses[k].fact += t; meses[k].bruta += (t - c); meses[k].ops += 1; meses[k].repEnt += 1;
+  });
+  (state.gastos || []).forEach(function(g) {
+    if (g.categoria === 'Mercadería/Stock') return;
+    var k = String(g.fecha || '').slice(0, 7);
+    if (meses[k]) meses[k].gastos += (parseFloat(g.monto) || 0);
+  });
+  var keys = Object.keys(meses);
+  drawSpark('sparkNeta', keys.map(function(k) { return meses[k].bruta - meses[k].gastos; }));
+  drawSpark('sparkTicket', keys.map(function(k) { return meses[k].ops > 0 ? meses[k].fact / meses[k].ops : 0; }));
+  drawSpark('sparkR', keys.map(function(k) { return meses[k].repEnt; }));
+}
+
+function drawSpark(id, vals) {
+  var svg = el(id); if (!svg) return;
+  var n = vals.length; if (!n) { svg.innerHTML = ''; return; }
+  var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  var range = (max - min) || 1;
+  var W = 100, H = 24, padX = 3, padY = 3;
+  var pts = vals.map(function(v, i) {
+    var x = padX + (i / (n - 1)) * (W - padX * 2);
+    var y = H - padY - ((v - min) / range) * (H - padY * 2);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  });
+  var last = pts[pts.length - 1].split(',');
+  svg.innerHTML = '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
+    '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="3" fill="var(--accent2)" stroke="var(--surface)" stroke-width="1.5"/>';
+}
+
+// Variación % vs. el período anterior de igual duración (para las 3 tarjetas KPI con tendencia)
+function renderDelta(id, cur, prev) {
+  var e = el(id); if (!e) return;
+  if (!prev) { e.textContent = ''; e.className = 'kdelta'; return; }
+  var pct = (cur - prev) / Math.abs(prev) * 100;
+  var up = pct >= 0;
+  e.textContent = (up ? '↑ ' : '↓ ') + Math.abs(pct).toFixed(0) + '%';
+  e.className = 'kdelta ' + (up ? 'up' : 'down');
+}
+
+// Gráfico de evolución mensual — facturación + ganancia neta por mes (últimos 12 meses)
+function renStatsMensual() {
+  if (!el('barM')) return;
+  var meses = {};
+  var hoy = new Date();
+  for (var i = 11; i >= 0; i--) {
+    var dM = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    var k = dM.getFullYear() + '-' + ('0' + (dM.getMonth() + 1)).slice(-2);
+    var lbl = dM.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '');
+    if (dM.getMonth() === 0) lbl += " '" + String(dM.getFullYear()).slice(-2);
+    meses[k] = { fact: 0, bruta: 0, gastos: 0, label: lbl };
+  }
+  state.ventas.forEach(function(v) {
+    var k = String(v.fecha || '').slice(0, 7);
+    if (!meses[k]) return;
+    var t = (parseFloat(v.precioVenta) || 0) * (parseInt(v.cantidad) || 0);
+    var c = (parseFloat(v.costoUnit) || 0) * (parseInt(v.cantidad) || 0);
+    meses[k].fact += t; meses[k].bruta += (t - c);
+  });
+  state.reparaciones.forEach(function(r) {
+    if (r.estado !== 'Entregado') return;
+    var k = String(r.fechaEntrega || r.fecha || '').slice(0, 7);
+    if (!meses[k]) return;
+    var t = parseFloat(r.precioReparacion) || 0, c = parseFloat(r.costoRepuesto) || 0;
+    meses[k].fact += t; meses[k].bruta += (t - c);
+  });
+  (state.gastos || []).forEach(function(g) {
+    if (g.categoria === 'Mercadería/Stock') return;
+    var k = String(g.fecha || '').slice(0, 7);
+    if (meses[k]) meses[k].gastos += (parseFloat(g.monto) || 0);
+  });
+  var vals = Object.keys(meses).map(function(k) { return meses[k]; });
+  var maxM = Math.max.apply(null, vals.map(function(m) { return m.fact; }).concat([1]));
+  el('barM').innerHTML = vals.map(function(m) {
+    var neta = m.bruta - m.gastos;
+    var hF = Math.max(m.fact / maxM * 100, 0);
+    var hN = Math.max(neta / maxM * 100, 0);
+    return '<div class="bcol">' +
+      (m.fact > 0 ? '<div class="bval">' + fm(m.fact).replace('$', '') + '</div>' : '<div class="bval"></div>') +
+      '<div style="width:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px;height:100%">' +
+        '<div title="Facturación ' + fm(m.fact) + '" style="width:42%;height:' + hF + '%;background:var(--accent);border-radius:3px 3px 0 0;' + (m.fact > 0 ? 'min-height:3px' : '') + '"></div>' +
+        '<div title="Ganancia neta ' + fm(neta) + '" style="width:42%;height:' + hN + '%;background:var(--success);border-radius:3px 3px 0 0;' + (neta > 0 ? 'min-height:3px' : '') + '"></div>' +
+      '</div>' +
+      '<div class="blabel">' + m.label + '</div></div>';
+  }).join('');
+}
+
+function exportXL() {
+  var desde = new Date(el('dDesde').value + 'T00:00:00');
+  var hasta = new Date(el('dHasta').value + 'T23:59:59');
+  function inR(f) { var d = new Date(f + 'T12:00:00'); return d >= desde && d <= hasta; }
+  var vF = state.ventas.filter(function(v) { return inR(v.fecha); });
+  var rF = state.reparaciones.filter(function(r) { return inR(r.fecha); });
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    [['Fecha', 'Hora', 'Producto', 'Cantidad', 'Precio Venta', 'Costo Unit.', 'Ganancia', 'Medio']].concat(
+      vF.map(function(v) { return [v.fecha, v.hora || '', v.nombre, v.cantidad, parseFloat(v.precioVenta), parseFloat(v.costoUnit) || 0, (parseFloat(v.precioVenta) - parseFloat(v.costoUnit || 0)) * (parseInt(v.cantidad) || 0), v.medio]; })
+    )), 'Ventas');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    [['Fecha', 'Cliente', 'Equipo', 'Problema', 'Precio', 'Costo Repuesto', 'Ganancia', 'Recibió', 'Estado']].concat(
+      rF.map(function(r) { return [r.fecha, r.cliente, r.equipo, r.problema, parseFloat(r.precioReparacion), parseFloat(r.costoRepuesto || 0), parseFloat(r.precioReparacion) - parseFloat(r.costoRepuesto || 0), r.tecnico, r.estado]; })
+    )), 'Reparaciones');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    [['Producto', 'Stock', 'Costo Unit.', 'Valor Total Costo']].concat(
+      state.stock.map(function(s) { return [s.nombre, parseInt(s.cantidad), parseFloat(s.costo), (parseFloat(s.costo) || 0) * (parseInt(s.cantidad) || 0)]; })
+    )), 'Stock');
+  XLSX.writeFile(wb, 'Tecnopuerto_' + el('dDesde').value + '_' + el('dHasta').value + '.xlsx');
+}
+
+function backupCompleto() {
+  var ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    [['id','nombre','cantidad','costo','precioVenta','stockMinimo']].concat(
+      state.stock.map(function(s) { return [s.id, s.nombre, parseInt(s.cantidad)||0, parseFloat(s.costo)||0, parseFloat(s.precioVenta)||0, parseInt(s.stockMinimo)||3]; })
+    )), 'Stock');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    [['id','fecha','hora','nombre','cantidad','precioVenta','costoUnit','medio']].concat(
+      state.ventas.map(function(v) { return [v.id, v.fecha, v.hora || '', v.nombre, parseInt(v.cantidad)||0, parseFloat(v.precioVenta)||0, parseFloat(v.costoUnit)||0, v.medio]; })
+    )), 'Ventas');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    [['id','fecha','cliente','whatsapp','equipo','problema','precioReparacion','costoRepuesto','tecnico','estado','notas','medio','medio1','montoMedio1','medio2','montoMedio2']].concat(
+      state.reparaciones.map(function(r) { return [r.id, r.fecha, r.cliente, r.whatsapp, r.equipo, r.problema, parseFloat(r.precioReparacion)||0, parseFloat(r.costoRepuesto)||0, r.tecnico, r.estado, r.notas, r.medio, r.medio1 || '', r.montoMedio1 || '', r.medio2 || '', r.montoMedio2 || '']; })
+    )), 'Reparaciones');
+  XLSX.writeFile(wb, 'Backup_Tecnopuerto_' + ts + '.xlsx');
+}
+
+// Pestaña Contador (monotributo) removida el 1/9/2026 a pedido de Román — pasan a tener contador humano.
+
+window.addEventListener('DOMContentLoaded', function() {
+  el('fHoy').textContent = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+  var d = new Date(), d30 = new Date(); d30.setDate(d30.getDate() - 30);
+  el('dDesde').value = localDateStr(d30);
+  el('dHasta').value = localDateStr(d);
+  el('vDesde').value = localDateStr(d30);
+  el('vHasta').value = localDateStr(d);
+  if (el('rDesde')) el('rDesde').value = localDateStr(d30);
+  if (el('rHasta')) el('rHasta').value = localDateStr(d);
+  cargarTodo();
+});
+</script>
+</body>
+</html>
